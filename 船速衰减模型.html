@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>物理实验模拟 2-7：汽艇受线性水阻力的减速运动</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --green: #22c55e;
+      --orange: #f97316;
+      --red: #ef4444;
+      --purple: #a855f7;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    header {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .title-block h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .problem-text {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .formula-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .pill {
+      background: #0f172a;
+      border: 1px solid var(--panel-border);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-family: "Times New Roman", Georgia, serif;
+      color: #e2e8f0;
+    }
+    .pill span {
+      color: var(--accent);
+      font-family: sans-serif;
+      font-size: 0.75rem;
+      margin-right: 4px;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Controls */
+    .preset-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .preset-btn {
+      background: #0f172a;
+      color: var(--muted);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 7px 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+    .preset-btn:hover {
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .preset-btn.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .control-item {
+      margin-bottom: 12px;
+    }
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      margin-bottom: 4px;
+    }
+    .control-header label {
+      color: #cbd5e1;
+    }
+    .control-val {
+      color: var(--accent);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+      height: 5px;
+      background: #0f172a;
+      border-radius: 4px;
+    }
+
+    .toggles {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 12px 0;
+      padding-top: 10px;
+      border-top: 1px solid var(--panel-border);
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      cursor: pointer;
+    }
+    .toggle-row input {
+      accent-color: var(--accent);
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+
+    .playback-bar {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-primary {
+      background: var(--accent);
+      color: #0f172a;
+    }
+    .btn-secondary {
+      background: #334155;
+      color: #f1f5f9;
+    }
+
+    .derived-box {
+      margin-top: 12px;
+      background: #0f172a;
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 0.78rem;
+    }
+    .derived-item span {
+      display: block;
+      color: var(--muted);
+    }
+    .derived-item strong {
+      color: #f8fafc;
+      font-size: 0.88rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Right side visualizations */
+    .viz-column {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      border-radius: 8px;
+      background: #0b1324;
+    }
+    #simCanvas {
+      height: 230px;
+    }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 650px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .chart-canvas {
+      height: 210px;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-block">
+        <h1>🚤 汽艇线性水阻力减速模拟 <span class="badge">习题 2-7 交互实验室</span></h1>
+        <div class="problem-text">
+          一质量为 <i>m</i> 的汽艇在湖水中以速率 <i>v</i><sub>0</sub> 直线运动，关闭发动机后受水阻力 <i>F</i><sub>f</sub> = −<i>kv</i>，观察速度与位移的指数规律。
+        </div>
+      </div>
+      <div class="formula-pills">
+        <div class="pill"><span>速度</span><i>v</i>(<i>t</i>) = <i>v</i><sub>0</sub><i>e</i><sup>−<i>βt</i></sup></div>
+        <div class="pill"><span>位移</span><i>x</i>(<i>t</i>) = (<i>v</i><sub>0</sub>/<i>β</i>)(1 − <i>e</i><sup>−<i>βt</i></sup>)</div>
+        <div class="pill"><span>特征参数</span><i>β</i> = <i>k</i>/<i>m</i>, <i>τ</i> = 1/<i>β</i></div>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <!-- Left Control Panel -->
+      <aside class="card">
+        <div class="card-title">实验参数与工况预设</div>
+        <div class="preset-group">
+          <button class="preset-btn active" data-preset="standard">标准模式</button>
+          <button class="preset-btn" data-preset="damped">大阻尼模式</button>
+          <button class="preset-btn" data-preset="inertia">高惯性模式</button>
+        </div>
+
+        <div class="control-item">
+          <div class="control-header">
+            <label for="massSlider">汽艇质量 <i>m</i></label>
+            <span class="control-val" id="massVal">500 kg</span>
+          </div>
+          <input type="range" id="massSlider" min="100" max="2000" step="50" value="500" />
+        </div>
+
+        <div class="control-item">
+          <div class="control-header">
+            <label for="kSlider">阻力系数 <i>k</i></label>
+            <span class="control-val" id="kVal">100 N·s/m</span>
+          </div>
+          <input type="range" id="kSlider" min="20" max="300" step="5" value="100" />
+        </div>
+
+        <div class="control-item">
+          <div class="control-header">
+            <label for="v0Slider">关闭引擎时初速度 <i>v</i><sub>0</sub></label>
+            <span class="control-val" id="v0Val">20 m/s</span>
+          </div>
+          <input type="range" id="v0Slider" min="5" max="40" step="1" value="20" />
+        </div>
+
+        <div class="control-item">
+          <div class="control-header">
+            <label for="timeSlider">时间轴手动拖动 <i>t</i></label>
+            <span class="control-val" id="timeVal">0.00 s</span>
+          </div>
+          <input type="range" id="timeSlider" min="0" max="25" step="0.05" value="0" />
+        </div>
+
+        <div class="toggles">
+          <label class="toggle-row">
+            <span>显示无阻力对照艇 (<i>F</i><sub>f</sub> = 0)</span>
+            <input type="checkbox" id="ghostToggle" checked />
+          </label>
+          <label class="toggle-row">
+            <span>显示速度与水阻力矢量箭头</span>
+            <input type="checkbox" id="vectorToggle" checked />
+          </label>
+        </div>
+
+        <div class="playback-bar">
+          <button class="btn btn-primary" id="playPauseBtn">暂停</button>
+          <button class="btn btn-secondary" id="resetBtn">重置 <i>t</i>=0</button>
+        </div>
+
+        <div class="derived-box">
+          <div class="derived-item">
+            <span>衰减系数 <i>β</i> = <i>k</i>/<i>m</i></span>
+            <strong id="betaOut">0.200 s⁻¹</strong>
+          </div>
+          <div class="derived-item">
+            <span>特征时间 <i>τ</i> = <i>m</i>/<i>k</i></span>
+            <strong id="tauOut">5.00 s</strong>
+          </div>
+          <div class="derived-item">
+            <span>极限距离 <i>x</i><sub>max</sub> = <i>mv</i><sub>0</sub>/<i>k</i></span>
+            <strong id="xmaxOut" style="color:#f87171;">100.0 m</strong>
+          </div>
+          <div class="derived-item">
+            <span>当前瞬时阻力 |<i>F</i><sub>f</sub>|</span>
+            <strong id="forceOut" style="color:#fb923c;">2000 N</strong>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right Visualization Panel -->
+      <main class="viz-column">
+        <div class="card">
+          <div class="card-title">
+            <span>湖面运动实景与矢量演示</span>
+            <div class="legend">
+              <span class="legend-item"><i class="dot" style="background:var(--green)"></i>速度矢量 <i>v</i>(<i>t</i>)</span>
+              <span class="legend-item"><i class="dot" style="background:var(--orange)"></i>水阻力 <i>F</i><sub>f</sub> = −<i>kv</i></span>
+              <span class="legend-item"><i class="dot" style="background:var(--red)"></i>极限停靠线 <i>x</i><sub>max</sub></span>
+            </div>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="simCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="card">
+            <div class="card-title">
+              <span>速度-时间曲线 <i>v</i>(<i>t</i>)</span>
+              <span style="font-size:0.75rem;color:var(--muted);"><i>t</i>=<i>τ</i> 时衰减至 36.8%</span>
+            </div>
+            <canvas id="vChart" class="chart-canvas"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>位移-时间曲线 <i>x</i>(<i>t</i>)</span>
+              <span style="font-size:0.75rem;color:var(--muted);"><i>t</i>=<i>τ</i> 时完成 63.2%</span>
+            </div>
+            <canvas id="xChart" class="chart-canvas"></canvas>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      m: 500,
+      k: 100,
+      v0: 20,
+      t: 0,
+      playing: true,
+      showGhost: true,
+      showVectors: true,
+      lastTimestamp: null
+    };
+
+    const presets = {
+      standard: { m: 500, k: 100, v0: 20 },
+      damped:   { m: 200, k: 220, v0: 20 },
+      inertia:  { m: 1500, k: 60, v0: 20 }
+    };
+
+    // DOM elements
+    const massSlider = document.getElementById('massSlider');
+    const kSlider = document.getElementById('kSlider');
+    const v0Slider = document.getElementById('v0Slider');
+    const timeSlider = document.getElementById('timeSlider');
+    const ghostToggle = document.getElementById('ghostToggle');
+    const vectorToggle = document.getElementById('vectorToggle');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const presetBtns = document.querySelectorAll('.preset-btn');
+
+    const massVal = document.getElementById('massVal');
+    const kVal = document.getElementById('kVal');
+    const v0Val = document.getElementById('v0Val');
+    const timeVal = document.getElementById('timeVal');
+    const betaOut = document.getElementById('betaOut');
+    const tauOut = document.getElementById('tauOut');
+    const xmaxOut = document.getElementById('xmaxOut');
+    const forceOut = document.getElementById('forceOut');
+
+    const simCanvas = document.getElementById('simCanvas');
+    const vChart = document.getElementById('vChart');
+    const xChart = document.getElementById('xChart');
+
+    function getPhysics(t) {
+      const beta = state.k / state.m;
+      const tau = state.m / state.k;
+      const xmax = state.v0 / beta;
+      const expFactor = Math.exp(-beta * t);
+      const v = state.v0 * expFactor;
+      const x = xmax * (1 - expFactor);
+      const force = state.k * v;
+      const ghostX = state.v0 * t;
+      return { beta, tau, xmax, v, x, force, ghostX };
+    }
+
+    function getMaxTime() {
+      const tau = state.m / state.k;
+      return Math.min(60, Math.max(12, Math.ceil(tau * 4.5)));
+    }
+
+    function syncUI() {
+      massVal.textContent = `${state.m} kg`;
+      kVal.textContent = `${state.k} N·s/m`;
+      v0Val.textContent = `${state.v0} m/s`;
+
+      const maxT = getMaxTime();
+      timeSlider.max = maxT;
+      if (state.t > maxT) state.t = maxT;
+      timeSlider.value = state.t;
+      timeVal.textContent = `${state.t.toFixed(2)} s`;
+
+      const p = getPhysics(state.t);
+      betaOut.textContent = `${p.beta.toFixed(3)} s⁻¹`;
+      tauOut.textContent = `${p.tau.toFixed(2)} s`;
+      xmaxOut.textContent = `${p.xmax.toFixed(1)} m`;
+      forceOut.textContent = `${p.force.toFixed(0)} N`;
+    }
+
+    function applyPreset(name) {
+      const cfg = presets[name];
+      if (!cfg) return;
+      state.m = cfg.m;
+      state.k = cfg.k;
+      state.v0 = cfg.v0;
+      massSlider.value = cfg.m;
+      kSlider.value = cfg.k;
+      v0Slider.value = cfg.v0;
+      state.t = 0;
+      state.playing = true;
+      playPauseBtn.textContent = '暂停';
+
+      presetBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.preset === name);
+      });
+      syncUI();
+    }
+
+    function clearPresetHighlight() {
+      presetBtns.forEach(btn => btn.classList.remove('active'));
+    }
+
+    presetBtns.forEach(btn => {
+      btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+    });
+
+    massSlider.addEventListener('input', e => {
+      state.m = Number(e.target.value);
+      clearPresetHighlight();
+      syncUI();
+    });
+    kSlider.addEventListener('input', e => {
+      state.k = Number(e.target.value);
+      clearPresetHighlight();
+      syncUI();
+    });
+    v0Slider.addEventListener('input', e => {
+      state.v0 = Number(e.target.value);
+      clearPresetHighlight();
+      syncUI();
+    });
+    timeSlider.addEventListener('input', e => {
+      state.t = Number(e.target.value);
+      state.playing = false;
+      playPauseBtn.textContent = '继续';
+      syncUI();
+    });
+    ghostToggle.addEventListener('change', e => {
+      state.showGhost = e.target.checked;
+    });
+    vectorToggle.addEventListener('change', e => {
+      state.showVectors = e.target.checked;
+    });
+    playPauseBtn.addEventListener('click', () => {
+      if (state.t >= getMaxTime() - 0.05) {
+        state.t = 0;
+      }
+      state.playing = !state.playing;
+      playPauseBtn.textContent = state.playing ? '暂停' : '继续';
+    });
+    resetBtn.addEventListener('click', () => {
+      state.t = 0;
+      state.playing = true;
+      playPauseBtn.textContent = '暂停';
+      syncUI();
+    });
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    function drawArrow(ctx, x1, y1, x2, y2, color, label) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy);
+      if (len < 4) return;
+      const angle = Math.atan2(dy, dx);
+      const head = Math.min(10, len * 0.35);
+
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - head * Math.cos(angle - Math.PI / 6), y2 - head * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x2 - head * Math.cos(angle + Math.PI / 6), y2 - head * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+
+      if (label) {
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = dx >= 0 ? 'left' : 'right';
+        ctx.fillText(label, x2 + (dx >= 0 ? 6 : -6), y2 + 4);
+      }
+      ctx.restore();
+    }
+
+    function drawBoat(ctx, cx, cy, isGhost) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      if (isGhost) {
+        ctx.globalAlpha = 0.32;
+      }
+      // Hull
+      ctx.fillStyle = isGhost ? '#94a3b8' : '#38bdf8';
+      ctx.beginPath();
+      ctx.moveTo(-24, 0);
+      ctx.lineTo(18, 0);
+      ctx.lineTo(28, -9);
+      ctx.lineTo(-22, -9);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cabin
+      ctx.fillStyle = isGhost ? '#cbd5e1' : '#f8fafc';
+      ctx.beginPath();
+      ctx.moveTo(-10, -9);
+      ctx.lineTo(8, -9);
+      ctx.lineTo(2, -17);
+      ctx.lineTo(-10, -17);
+      ctx.closePath();
+      ctx.fill();
+
+      // Engine block
+      ctx.fillStyle = isGhost ? '#64748b' : '#334155';
+      ctx.fillRect(-27, -11, 5, 11);
+      ctx.restore();
+    }
+
+    function drawSimulation() {
+      const { ctx, w, h } = setupCanvas(simCanvas);
+      const p = getPhysics(state.t);
+
+      // Sky & Water background
+      ctx.fillStyle = '#0b1324';
+      ctx.fillRect(0, 0, w, h);
+
+      const waterY = h * 0.62;
+      const waterGrad = ctx.createLinearGradient(0, waterY, 0, h);
+      waterGrad.addColorStop(0, '#0c4a6e');
+      waterGrad.addColorStop(1, '#082f49');
+      ctx.fillStyle = waterGrad;
+      ctx.fillRect(0, waterY, w, h - waterY);
+
+      // Water surface ripples
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let sx = 0; sx <= w; sx += 8) {
+        const wy = waterY + Math.sin(sx * 0.04 + state.t * 3) * 2;
+        if (sx === 0) ctx.moveTo(sx, wy);
+        else ctx.lineTo(sx, wy);
+      }
+      ctx.stroke();
+
+      // World scale: map [0, xmax * 1.18] onto [leftPad, rightPad]
+      const leftPad = 56;
+      const rightPad = w - 48;
+      const viewMaxX = Math.max(10, p.xmax * 1.18);
+      const toScreenX = (worldX) => leftPad + (worldX / viewMaxX) * (rightPad - leftPad);
+
+      // Ruler ticks
+      const rawStep = viewMaxX / 6;
+      const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+      const step = Math.ceil(rawStep / mag) * mag;
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      for (let dist = 0; dist <= viewMaxX; dist += step) {
+        const sx = toScreenX(dist);
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+        ctx.beginPath();
+        ctx.moveTo(sx, waterY);
+        ctx.lineTo(sx, waterY + 8);
+        ctx.stroke();
+        ctx.fillText(`${Math.round(dist)}m`, sx, waterY + 22);
+      }
+
+      // Limit Buoy Line at xmax
+      const limitX = toScreenX(p.xmax);
+      ctx.save();
+      ctx.strokeStyle = '#ef4444';
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(limitX, 26);
+      ctx.lineTo(limitX, h - 14);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Floating red buoy
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(limitX, waterY, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fca5a5';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`极限距离 x_max = ${p.xmax.toFixed(1)} m`, Math.min(w - 85, Math.max(85, limitX)), 20);
+      ctx.restore();
+
+      // Ghost boat (zero drag)
+      if (state.showGhost) {
+        const gx = toScreenX(p.ghostX);
+        if (gx <= w + 40) {
+          drawBoat(ctx, gx, waterY - 22, true);
+          ctx.fillStyle = 'rgba(148, 163, 184, 0.75)';
+          ctx.font = '11px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('无阻力对照', gx, waterY - 44);
+        }
+      }
+
+      // Main boat
+      const bx = toScreenX(p.x);
+      // Wake trail proportional to current speed
+      const wakeLen = (p.v / state.v0) * 65;
+      if (wakeLen > 2) {
+        const wakeGrad = ctx.createLinearGradient(bx - 25 - wakeLen, waterY, bx - 25, waterY);
+        wakeGrad.addColorStop(0, 'rgba(255,255,255,0)');
+        wakeGrad.addColorStop(1, 'rgba(224,242,254,0.65)');
+        ctx.strokeStyle = wakeGrad;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(bx - 25 - wakeLen, waterY + 1);
+        ctx.lineTo(bx - 25, waterY + 1);
+        ctx.stroke();
+      }
+
+      drawBoat(ctx, bx, waterY + 2, false);
+
+      // Proportional vector arrows
+      if (state.showVectors) {
+        const ratio = p.v / state.v0;
+        const maxArrowPx = 85;
+        const vLen = ratio * maxArrowPx;
+        const fLen = ratio * maxArrowPx; // F_f = -kv scales identically with v!
+
+        drawArrow(ctx, bx + 28, waterY - 8, bx + 28 + vLen, waterY - 8, '#22c55e', `v=${p.v.toFixed(1)}m/s`);
+        drawArrow(ctx, bx - 27, waterY - 8, bx - 27 - fLen, waterY - 8, '#f97316', `Ff=${p.force.toFixed(0)}N`);
+      }
+
+      // HUD readout top-left
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+      ctx.fillRect(12, 10, 215, 58);
+      ctx.strokeStyle = '#334155';
+      ctx.strokeRect(12, 10, 215, 58);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(`时间 t = ${state.t.toFixed(2)} s`, 20, 28);
+      ctx.fillText(`速度 v = ${p.v.toFixed(2)} m/s (${((p.v/state.v0)*100).toFixed(1)}%)`, 20, 45);
+      ctx.fillText(`位移 x = ${p.x.toFixed(2)} m (${((p.x/p.xmax)*100).toFixed(1)}%)`, 20, 62);
+    }
+
+    function drawChart(canvas, type) {
+      const { ctx, w, h } = setupCanvas(canvas);
+      const p = getPhysics(state.t);
+      const maxT = getMaxTime();
+      const maxY = type === 'v' ? state.v0 * 1.15 : p.xmax * 1.15;
+
+      const pad = { left: 46, right: 18, top: 18, bottom: 28 };
+      const plotW = w - pad.left - pad.right;
+      const plotH = h - pad.top - pad.bottom;
+
+      const toX = t => pad.left + (t / maxT) * plotW;
+      const toY = val => pad.top + plotH - (val / maxY) * plotH;
+
+      ctx.fillStyle = '#0b1324';
+      ctx.fillRect(0, 0, w, h);
+
+      // Axes
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top);
+      ctx.lineTo(pad.left, pad.top + plotH);
+      ctx.lineTo(pad.left + plotW, pad.top + plotH);
+      ctx.stroke();
+
+      // Axis labels
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('0', pad.left - 6, pad.top + plotH + 4);
+      const topRef = type === 'v' ? state.v0 : p.xmax;
+      ctx.fillText(topRef.toFixed(0), pad.left - 6, toY(topRef) + 4);
+      ctx.textAlign = 'center';
+      ctx.fillText(`t (${maxT}s)`, pad.left + plotW - 14, pad.top + plotH + 20);
+
+      // Asymptote for x-t
+      if (type === 'x') {
+        const yMaxLine = toY(p.xmax);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.55)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, yMaxLine);
+        ctx.lineTo(pad.left + plotW, yMaxLine);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Characteristic time tau marker
+      if (p.tau <= maxT) {
+        const tauX = toX(p.tau);
+        const tauVal = type === 'v' ? state.v0 * Math.exp(-1) : p.xmax * (1 - Math.exp(-1));
+        const tauY = toY(tauVal);
+
+        ctx.save();
+        ctx.strokeStyle = 'rgba(168, 85, 247, 0.6)';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(tauX, pad.top + plotH);
+        ctx.lineTo(tauX, tauY);
+        ctx.lineTo(pad.left, tauY);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.fillStyle = '#c084fc';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`τ=${p.tau.toFixed(1)}s`, tauX, pad.top + plotH + 14);
+      }
+
+      // Curve
+      const curveColor = type === 'v' ? '#22c55e' : '#38bdf8';
+      ctx.strokeStyle = curveColor;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      const steps = 120;
+      for (let i = 0; i <= steps; i++) {
+        const ti = (i / steps) * maxT;
+        const yi = type === 'v'
+          ? state.v0 * Math.exp(-p.beta * ti)
+          : p.xmax * (1 - Math.exp(-p.beta * ti));
+        const sx = toX(ti);
+        const sy = toY(yi);
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+
+      // Current state dot
+      const curVal = type === 'v' ? p.v : p.x;
+      const curX = toX(state.t);
+      const curY = toY(curVal);
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(curX, curY, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = curveColor;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function loop(timestamp) {
+      if (state.lastTimestamp !== null && state.playing) {
+        const dt = Math.min(0.05, (timestamp - state.lastTimestamp) / 1000);
+        state.t += dt;
+        const maxT = getMaxTime();
+        if (state.t >= maxT) {
+          state.t = maxT;
+          state.playing = false;
+          playPauseBtn.textContent = '重播';
+        }
+        syncUI();
+      }
+      state.lastTimestamp = timestamp;
+
+      drawSimulation();
+      drawChart(vChart, 'v');
+      drawChart(xChart, 'x');
+      requestAnimationFrame(loop);
+    }
+
+    syncUI();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

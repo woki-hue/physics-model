@@ -1,0 +1,2449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>斜抛运动（线性空气阻力 Ff = kv）弹道交互模拟实验室</title>
+  <style>
+    /* ==========================================================================
+       1. 深色科研实验室视觉规范与设计令牌
+       ========================================================================== */
+    :root {
+      --bg-canvas: #050914;
+      --bg-surface: #0b1120;
+      --bg-card: rgba(15, 23, 42, 0.88);
+      --bg-card-inner: rgba(9, 14, 26, 0.72);
+      --border-subtle: rgba(148, 163, 184, 0.16);
+      --border-accent: rgba(56, 189, 248, 0.38);
+
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --c-cyan: #22d3ee;
+      --c-sky: #38bdf8;
+      --c-teal: #2dd4bf;
+      --c-emerald: #10b981;
+      --c-amber: #f59e0b;
+      --c-orange: #f97316;
+      --c-rose: #f43f5e;
+      --c-violet: #c084fc;
+
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 7px;
+      --shadow-elevated: 0 14px 36px -10px rgba(2, 6, 23, 0.85);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background-color: var(--bg-canvas);
+      background-image:
+        radial-gradient(circle at 12% 0%, rgba(14, 116, 144, 0.16) 0%, transparent 40%),
+        radial-gradient(circle at 88% 8%, rgba(30, 58, 138, 0.18) 0%, transparent 44%);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .math-i {
+      font-family: "Times New Roman", Georgia, serif;
+      font-style: italic;
+    }
+
+    /* 数学分式组件 */
+    .frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      margin: 0 2px;
+      font-size: 0.84em;
+      line-height: 1.05;
+    }
+    .frac > span:first-child {
+      border-bottom: 1px solid currentColor;
+      padding: 0 3px 1px;
+    }
+    .frac > span:last-child {
+      padding: 1px 3px 0;
+    }
+
+    /* ==========================================================================
+       2. 顶部导航与轨迹方程公式徽章栏
+       ========================================================================== */
+    .topbar {
+      background: rgba(8, 13, 25, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .topbar-inner {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 11px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-emblem {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(59, 130, 246, 0.25));
+      border: 1px solid rgba(34, 211, 238, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--c-cyan);
+      box-shadow: 0 0 18px rgba(34, 211, 238, 0.16);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.08rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(34, 211, 238, 0.12);
+      color: var(--c-cyan);
+      border: 1px solid rgba(34, 211, 238, 0.32);
+    }
+
+    .brand-sub {
+      font-size: 0.79rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .formula-badge {
+      background: rgba(13, 20, 36, 0.92);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      border-radius: 10px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.86rem;
+      color: #e2e8f0;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .formula-badge .f-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--c-cyan);
+      background: rgba(34, 211, 238, 0.12);
+      border: 1px solid rgba(34, 211, 238, 0.25);
+      padding: 2px 7px;
+      border-radius: 5px;
+      letter-spacing: 0.02em;
+    }
+
+    .formula-badge .f-aux {
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      border-left: 1px solid var(--border-subtle);
+      padding-left: 10px;
+    }
+
+    /* ==========================================================================
+       3. 主工作区双栏网格布局
+       ========================================================================== */
+    .workspace {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 16px 20px 28px;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 1100px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .workspace {
+        padding: 12px 12px 24px;
+      }
+      .topbar-inner {
+        padding: 10px 12px;
+      }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 15px;
+      box-shadow: var(--shadow-elevated);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--c-cyan);
+      box-shadow: 0 0 8px var(--c-cyan);
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       4. 左侧控制面板与实时遥测卡片
+       ========================================================================== */
+    .left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 7px;
+      margin-bottom: 14px;
+    }
+
+    @media (max-width: 420px) {
+      .preset-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .preset-btn {
+      background: var(--bg-card-inner);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+      text-align: left;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.16s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 3px;
+    }
+
+    .preset-btn:hover {
+      border-color: rgba(56, 189, 248, 0.45);
+      color: #f8fafc;
+      background: rgba(22, 33, 56, 0.92);
+    }
+
+    .preset-btn.active {
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.16), rgba(56, 189, 248, 0.08));
+      border-color: var(--c-cyan);
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 var(--c-cyan);
+    }
+
+    .preset-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .preset-meta {
+      font-size: 0.69rem;
+      color: var(--text-secondary);
+    }
+
+    /* 滑块控件组 */
+    .sliders-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .slider-item {
+      background: var(--bg-card-inner);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: var(--radius-md);
+      padding: 9px 11px;
+    }
+
+    .slider-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+      font-size: 0.8rem;
+    }
+
+    .slider-name {
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    .slider-badge {
+      font-size: 0.81rem;
+      font-weight: 700;
+      color: var(--c-cyan);
+      background: rgba(34, 211, 238, 0.1);
+      border: 1px solid rgba(34, 211, 238, 0.24);
+      padding: 1px 7px;
+      border-radius: 5px;
+    }
+
+    .slider-badge.amber {
+      color: var(--c-amber);
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.28);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--c-cyan);
+      border: 2px solid #050914;
+      box-shadow: 0 0 9px rgba(34, 211, 238, 0.65);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+    }
+
+    input[type="range"].scrubber::-webkit-slider-thumb {
+      background: var(--c-amber);
+      box-shadow: 0 0 9px rgba(245, 158, 11, 0.65);
+    }
+
+    .slider-scale {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* 播放与速度控制按钮 */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr 0.85fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .action-btn {
+      min-height: 38px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-primary);
+      font-size: 0.81rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .action-btn:hover {
+      border-color: var(--c-sky);
+      background: rgba(30, 41, 59, 0.95);
+    }
+
+    .action-btn.primary {
+      background: linear-gradient(135deg, #0284c7, #0891b2);
+      border-color: rgba(34, 211, 238, 0.5);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(8, 145, 178, 0.35);
+    }
+
+    .action-btn.primary:hover {
+      filter: brightness(1.08);
+    }
+
+    .action-btn.slow-on {
+      background: rgba(245, 158, 11, 0.18);
+      border-color: var(--c-amber);
+      color: #fcd34d;
+    }
+
+    /* 开关选项列表 */
+    .switches-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      cursor: pointer;
+      user-select: none;
+      padding: 2px 0;
+    }
+
+    .switch-row.abyss-highlight {
+      color: #fda4af;
+      font-weight: 600;
+    }
+
+    .toggle-ui {
+      position: relative;
+      width: 38px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .toggle-ui input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: #1e293b;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 999px;
+      transition: 0.2s;
+    }
+
+    .toggle-slider::after {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 2px;
+      top: 2px;
+      border-radius: 50%;
+      background: #94a3b8;
+      transition: 0.2s;
+    }
+
+    .toggle-ui input:checked + .toggle-slider {
+      background: rgba(34, 211, 238, 0.25);
+      border-color: var(--c-cyan);
+    }
+
+    .toggle-ui input:checked + .toggle-slider::after {
+      transform: translateX(18px);
+      background: var(--c-cyan);
+    }
+
+    .toggle-ui.rose input:checked + .toggle-slider {
+      background: rgba(244, 63, 94, 0.28);
+      border-color: var(--c-rose);
+    }
+
+    .toggle-ui.rose input:checked + .toggle-slider::after {
+      background: var(--c-rose);
+    }
+
+    /* 实时遥测仪表盘 */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .tele-card {
+      background: var(--bg-card-inner);
+      border: 1px solid rgba(148, 163, 184, 0.13);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+    }
+
+    .tele-card.wide {
+      grid-column: span 2;
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.11), rgba(34, 211, 238, 0.08));
+      border-color: rgba(244, 63, 94, 0.32);
+    }
+
+    .tele-title {
+      font-size: 0.71rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tele-main {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-top: 2px;
+    }
+
+    .tele-sub {
+      font-size: 0.69rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ==========================================================================
+       5. 右侧主弹道视口与双联同步图表
+       ========================================================================== */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .legend-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .dot-swatch {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .line-swatch {
+      width: 14px;
+      height: 2.5px;
+      display: inline-block;
+    }
+
+    .viewport-frame {
+      position: relative;
+      width: 100%;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: #040812;
+    }
+
+    #ballisticsCanvas {
+      display: block;
+      width: 100%;
+      height: 430px;
+    }
+
+    @media (max-width: 640px) {
+      #ballisticsCanvas {
+        height: 340px;
+      }
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 820px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-box {
+      display: block;
+      width: 100%;
+      height: 255px;
+    }
+
+    .chart-caption {
+      margin-top: 8px;
+      font-size: 0.73rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部导航栏与解析轨迹方程徽章 -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-emblem" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 20h18" />
+            <path d="M4 17C8 6 15 6 19 19" />
+            <circle cx="19" cy="19" r="1.5" fill="currentColor" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            <span>斜抛运动（线性空气阻力 <i class="math-i">F</i><sub>f</sub> = <i class="math-i">kv</i>）弹道交互模拟实验室</span>
+            <span class="pill-badge">不对称弹道 · 水平极限渐近线</span>
+          </div>
+          <div class="brand-sub">
+            解析解实时驱动 · 对比真空理想抛物线，观察“上升平缓、下落陡峭”与着地倾角 |<i class="math-i">&theta;</i><sub>land</sub>| &gt; <i class="math-i">&theta;</i><sub>0</sub>
+          </div>
+        </div>
+      </div>
+
+      <!-- 轨迹方程精致公式徽章 -->
+      <div class="formula-badge" title="线性阻力下的弹道轨迹解析方程">
+        <span class="f-tag">轨迹方程</span>
+        <span>
+          <i class="math-i">y</i>(<i class="math-i">x</i>) =
+          <span style="color:#7dd3fc;">(tan<i class="math-i">&theta;</i><sub>0</sub> + <span class="frac"><span><i class="math-i">g</i></span><span><i class="math-i">&beta; v</i><sub>0</sub> cos<i class="math-i">&theta;</i><sub>0</sub></span></span>)<i class="math-i">x</i></span>
+          +
+          <span style="color:#5eead4;"><span class="frac"><span><i class="math-i">g</i></span><span><i class="math-i">&beta;</i><sup>2</sup></span></span> ln(1 &minus; <span class="frac"><span><i class="math-i">&beta; x</i></span><span><i class="math-i">v</i><sub>0</sub> cos<i class="math-i">&theta;</i><sub>0</sub></span></span>)</span>
+        </span>
+        <span class="f-aux mono">其中 &beta; = k/m, &nbsp;x<sub>&infin;</sub> = mv<sub>0</sub>cos&theta;<sub>0</sub>/k</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主实验工作区 -->
+  <main class="workspace">
+    <!-- 左侧控制与遥测面板 -->
+    <aside class="left-col">
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="dot-indicator"></span>
+            <span>物理工况预设与发射参数</span>
+          </div>
+          <span class="mono" style="font-size:0.72rem;color:var(--c-cyan);" id="betaBadge">&beta; = 0.080 s&sup1;</span>
+        </div>
+
+        <!-- 4 个一键物理工况预设 -->
+        <div class="preset-grid" id="presetGroup">
+          <button type="button" class="preset-btn active" data-preset="standard">
+            <span class="preset-title">标准炮弹</span>
+            <span class="preset-meta mono">m=10kg k=0.8 v₀=60 θ=45°</span>
+          </button>
+          <button type="button" class="preset-btn" data-preset="lightHighDrag">
+            <span class="preset-title">强阻尼轻弹（撞墙式下坠）</span>
+            <span class="preset-meta mono">m=2kg k=1.6 v₀=65 θ=55°</span>
+          </button>
+          <button type="button" class="preset-btn" data-preset="heavyLowDrag">
+            <span class="preset-title">重型低阻穿甲弹</span>
+            <span class="preset-meta mono">m=40kg k=0.4 v₀=70 θ=45°</span>
+          </button>
+          <button type="button" class="preset-btn" data-preset="optimalAngle">
+            <span class="preset-title">有阻力最大射程角</span>
+            <span class="preset-meta mono">m=10kg k=1.2 v₀=60 θ=34°</span>
+          </button>
+        </div>
+
+        <!-- 滑块参数调节 -->
+        <div class="sliders-stack">
+          <div class="slider-item">
+            <div class="slider-row">
+              <label class="slider-name" for="angleSlider">发射仰角 <i class="math-i">&theta;</i><sub>0</sub></label>
+              <span class="slider-badge mono" id="angleVal">45.0°</span>
+            </div>
+            <input type="range" id="angleSlider" min="5" max="85" step="0.5" value="45" />
+            <div class="slider-scale mono"><span>5°</span><span>45°</span><span>85°</span></div>
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-row">
+              <label class="slider-name" for="v0Slider">炮口初速度 <i class="math-i">v</i><sub>0</sub></label>
+              <span class="slider-badge mono" id="v0Val">60.0 m/s</span>
+            </div>
+            <input type="range" id="v0Slider" min="10" max="120" step="1" value="60" />
+            <div class="slider-scale mono"><span>10 m/s</span><span>65 m/s</span><span>120 m/s</span></div>
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-row">
+              <label class="slider-name" for="kSlider">空气阻力系数 <i class="math-i">k</i></label>
+              <span class="slider-badge mono" id="kVal">0.80 N·s/m</span>
+            </div>
+            <input type="range" id="kSlider" min="0.05" max="5.00" step="0.05" value="0.80" />
+            <div class="slider-scale mono"><span>0.05</span><span>2.50</span><span>5.00 N·s/m</span></div>
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-row">
+              <label class="slider-name" for="mSlider">炮弹质量 <i class="math-i">m</i></label>
+              <span class="slider-badge mono" id="mVal">10.0 kg</span>
+            </div>
+            <input type="range" id="mSlider" min="1" max="50" step="0.5" value="10" />
+            <div class="slider-scale mono"><span>1 kg</span><span>25 kg</span><span>50 kg</span></div>
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-row">
+              <label class="slider-name" for="timeSlider">时间轴手动拖动 <i class="math-i">t</i></label>
+              <span class="slider-badge amber mono" id="timeVal">0.00 s / 6.84 s</span>
+            </div>
+            <input type="range" id="timeSlider" class="scrubber" min="0" max="1000" step="1" value="0" />
+            <div class="slider-scale mono">
+              <span>0.00 s</span>
+              <span id="peakTimeHint">最高点</span>
+              <span id="endTimeHint">终点</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 播放 / 慢动作 / 重置发射按钮 -->
+        <div class="btn-row">
+          <button type="button" class="action-btn primary" id="playPauseBtn">
+            <span id="playPauseIcon">❚❚</span>
+            <span id="playPauseText">暂停</span>
+          </button>
+          <button type="button" class="action-btn" id="slowMoBtn">
+            <span>⏱</span>
+            <span>0.5x 慢动作</span>
+          </button>
+          <button type="button" class="action-btn" id="resetBtn">
+            <span>↺</span>
+            <span>重置发射</span>
+          </button>
+        </div>
+
+        <!-- 视觉图层开关 -->
+        <div class="switches-box">
+          <label class="switch-row">
+            <span>真空无阻力对照弹道 (<i class="math-i">k</i> = 0)</span>
+            <span class="toggle-ui">
+              <input type="checkbox" id="toggleVacuum" checked />
+              <span class="toggle-slider"></span>
+            </span>
+          </label>
+          <label class="switch-row">
+            <span>实时速度与受力矢量 (<i class="math-i">v</i>, <i class="math-i">F</i><sub>f</sub>, <i class="math-i">mg</i>)</span>
+            <span class="toggle-ui">
+              <input type="checkbox" id="toggleVectors" checked />
+              <span class="toggle-slider"></span>
+            </span>
+          </label>
+          <label class="switch-row">
+            <span>水平极限渐近线 <i class="math-i">x</i> = <i class="math-i">x</i><sub>&infin;</sub></span>
+            <span class="toggle-ui">
+              <input type="checkbox" id="toggleAsymptote" checked />
+              <span class="toggle-slider"></span>
+            </span>
+          </label>
+          <label class="switch-row abyss-highlight">
+            <span>深渊模式（移除地面限制 · 观察渐近垂直下坠）</span>
+            <span class="toggle-ui rose">
+              <input type="checkbox" id="toggleAbyss" />
+              <span class="toggle-slider"></span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <!-- 实时遥测与解析数据卡片 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="dot-indicator" style="background:var(--c-emerald);box-shadow:0 0 8px var(--c-emerald);"></span>
+            <span>弹道实时遥测与解析指标</span>
+          </div>
+          <span class="mono" style="font-size:0.72rem;color:var(--text-secondary);" id="vtBadge">v_t = 122.5 m/s</span>
+        </div>
+
+        <div class="telemetry-grid">
+          <div class="tele-card">
+            <div class="tele-title"><span>瞬时坐标 (<i class="math-i">x</i>, <i class="math-i">y</i>)</span></div>
+            <div class="tele-main mono" id="statPos">(0.0, 0.0) m</div>
+            <div class="tele-sub mono" id="statPosVac">真空: (0.0, 0.0) m</div>
+          </div>
+
+          <div class="tele-card">
+            <div class="tele-title"><span>瞬时速率 <i class="math-i">v</i>(<i class="math-i">t</i>)</span></div>
+            <div class="tele-main mono" id="statSpeed">60.00 m/s</div>
+            <div class="tele-sub mono" id="statVelComp">vx=42.4, vy=+42.4</div>
+          </div>
+
+          <div class="tele-card">
+            <div class="tele-title"><span>瞬时速度倾角 <i class="math-i">&theta;</i>(<i class="math-i">t</i>)</span></div>
+            <div class="tele-main mono" style="color:var(--c-cyan);" id="statAngle">+45.0°</div>
+            <div class="tele-sub mono" id="statStage">阶段: 爬升阶段</div>
+          </div>
+
+          <div class="tele-card">
+            <div class="tele-title"><span>最大高度 <i class="math-i">y</i><sub>max</sub></span></div>
+            <div class="tele-main mono" style="color:var(--c-teal);" id="statYmax">77.42 m</div>
+            <div class="tele-sub mono" id="statYmaxVac">真空高度: 91.84 m</div>
+          </div>
+
+          <div class="tele-card">
+            <div class="tele-title"><span>实际射程 <i class="math-i">R</i></span></div>
+            <div class="tele-main mono" style="color:var(--c-amber);" id="statRange">290.15 m</div>
+            <div class="tele-sub mono" id="statRangeVac">真空射程: 367.35 m</div>
+          </div>
+
+          <div class="tele-card">
+            <div class="tele-title"><span>着地倾角 |<i class="math-i">&theta;</i><sub>land</sub>| vs <i class="math-i">&theta;</i><sub>0</sub></span></div>
+            <div class="tele-main mono" style="color:var(--c-orange);" id="statLandAngle">53.2° &gt; 45.0°</div>
+            <div class="tele-sub mono" id="statLandSpeed">着地速率: 47.1 m/s</div>
+          </div>
+
+          <div class="tele-card wide">
+            <div class="tele-title">
+              <span>水平极限渐近线距离 <i class="math-i">x</i><sub>&infin;</sub> = <i class="math-i">m v</i><sub>0</sub> cos<i class="math-i">&theta;</i><sub>0</sub> / <i class="math-i">k</i></span>
+              <span class="mono" style="color:#fda4af;font-weight:700;" id="statAsymRatio">射程占极限 54.7%</span>
+            </div>
+            <div class="tele-main mono" style="color:#fda4af;font-size:1.06rem;" id="statXinf">
+              530.33 m <span style="font-size:0.75rem;font-weight:400;color:#fecdd3;">(无论下落多深都无法越过此竖直线)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 右侧主弹道视口与底部双联图表 -->
+    <section class="right-col">
+      <!-- 主弹道视口 -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="dot-indicator" style="background:var(--c-sky);box-shadow:0 0 8px var(--c-sky);"></span>
+            <span>弹道轨迹与空气动力学实时视口</span>
+          </div>
+          <div class="legend-strip">
+            <span class="legend-item"><i class="dot-swatch" style="background:#10b981;"></i>速度 <i class="math-i">v</i></span>
+            <span class="legend-item"><i class="dot-swatch" style="background:#f97316;"></i>阻力 <i class="math-i">F</i><sub>f</sub> = &minus;<i class="math-i">kv</i></span>
+            <span class="legend-item"><i class="dot-swatch" style="background:#38bdf8;"></i>重力 <i class="math-i">mg</i></span>
+            <span class="legend-item"><i class="line-swatch" style="border-top:2px dashed #f43f5e;"></i>渐近线 <i class="math-i">x</i><sub>&infin;</sub></span>
+            <span class="legend-item"><i class="line-swatch" style="border-top:2px dashed #94a3b8;"></i>真空对照</span>
+          </div>
+        </div>
+
+        <div class="viewport-frame">
+          <canvas id="ballisticsCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- 底部双联同步数据图表 -->
+      <div class="charts-grid">
+        <!-- 图表 1：分速度曲线 vx(t) 与 vy(t) -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="dot-indicator" style="background:var(--c-cyan);"></span>
+              <span>水平与竖直分速度曲线 <i class="math-i">v</i><sub>x</sub>(<i class="math-i">t</i>) &amp; <i class="math-i">v</i><sub>y</sub>(<i class="math-i">t</i>)</span>
+            </div>
+            <span class="mono" style="font-size:0.72rem;color:var(--text-secondary);">v_x &rarr; 0, v_y &rarr; &minus;v_t</span>
+          </div>
+          <div class="viewport-frame">
+            <canvas id="velChartCanvas" class="chart-box"></canvas>
+          </div>
+          <div class="chart-caption">
+            <span>青线 <i class="math-i">v</i><sub>x</sub>(<i class="math-i">t</i>) 指数衰减归零；绿线 <i class="math-i">v</i><sub>y</sub>(<i class="math-i">t</i>) 在最高点过零并趋近终端速度 &minus;<i class="math-i">v</i><sub>t</sub></span>
+            <span class="mono" style="color:var(--c-cyan);" id="velChartNote">t_peak = 3.21 s</span>
+          </div>
+        </div>
+
+        <!-- 图表 2：机械能衰减曲线 E(t) / E0 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="dot-indicator" style="background:var(--c-violet);box-shadow:0 0 8px var(--c-violet);"></span>
+              <span>机械能衰减曲线 <i class="math-i">E</i>(<i class="math-i">t</i>) / <i class="math-i">E</i><sub>0</sub></span>
+            </div>
+            <span class="mono" style="font-size:0.72rem;color:var(--text-secondary);">dE/dt = &minus;kv&sup2; &le; 0</span>
+          </div>
+          <div class="viewport-frame">
+            <canvas id="energyChartCanvas" class="chart-box"></canvas>
+          </div>
+          <div class="chart-caption">
+            <span>实线为总机械能占比，虚线分别为动能 <i class="math-i">K</i>/<i class="math-i">E</i><sub>0</sub> 与重力势能 <i class="math-i">U</i>/<i class="math-i">E</i><sub>0</sub></span>
+            <span class="mono" style="color:var(--c-violet);" id="energyChartNote">落地耗散: 38.4%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /**
+     * ============================================================================
+     * 斜抛运动（线性空气阻力 Ff = kv）解析物理引擎与高分屏渲染系统
+     * 控制微分方程：
+     *   m (dv_x / dt) = -k v_x
+     *   m (dv_y / dt) = -m g - k v_y
+     * 解析解（设 β = k / m, v_t = g / β = m g / k）：
+     *   x(t) = (v_0 cos θ_0 / β) (1 - e^(-β t))
+     *   y(t) = ((v_0 sin θ_0 + v_t) / β) (1 - e^(-β t)) - v_t t
+     * ============================================================================
+     */
+    (function () {
+      'use strict';
+
+      // ==========================================================================
+      // 1. 仿真状态与物理参数定义
+      // ==========================================================================
+      const state = {
+        thetaDeg: 45.0,       // 发射仰角 (度)
+        v0: 60.0,             // 初速度 (m/s)
+        k: 0.80,              // 空气阻力系数 (N·s/m)
+        m: 10.0,              // 炮弹质量 (kg)
+        g: 9.8,               // 重力加速度 (m/s^2)
+        t: 0.0,               // 当前仿真时间 (s)
+        isPlaying: true,      // 播放状态
+        slowMo: false,        // 慢动作开关 (0.5x)
+        showVacuum: true,     // 真空无阻力对照弹道
+        showVectors: true,    // 实时速度与受力矢量
+        showAsymptote: true,  // 水平极限渐近线 x = x_∞
+        abyssMode: false,     // 深渊模式（移除地面限制）
+        flowPhase: 0,         // 空气流线动画相位
+        lastFrameTime: null
+      };
+
+      // 4 个一键物理工况预设
+      const PRESETS = {
+        standard:      { m: 10.0, k: 0.80, v0: 60.0, thetaDeg: 45.0 },
+        lightHighDrag: { m: 2.0,  k: 1.60, v0: 65.0, thetaDeg: 55.0 },
+        heavyLowDrag:  { m: 40.0, k: 0.40, v0: 70.0, thetaDeg: 45.0 },
+        optimalAngle:  { m: 10.0, k: 1.20, v0: 60.0, thetaDeg: 34.0 }
+      };
+
+      // 缓存当前参数下的解析特征量，避免重复求根
+      let cachedMetrics = null;
+      let cachedKey = '';
+
+      // ==========================================================================
+      // 2. 高精度解析求解器与二分+牛顿求根
+      // ==========================================================================
+      function evalPositionY(t, vy0, vt, beta, g) {
+        const bt = beta * t;
+        if (bt < 1e-4) {
+          // 极小 βt 下使用四阶泰勒展开避免浮点相消
+          const c2 = 0.5 * (g + beta * vy0);
+          const c3 = (beta * c2) / 3.0;
+          const c4 = (beta * c3) / 4.0;
+          return vy0 * t - c2 * t * t + c3 * t * t * t - c4 * t * t * t * t;
+        }
+        const oneMinusExp = -Math.expm1(-bt); // 精确计算 1 - e^(-βt)
+        return ((vy0 + vt) / beta) * oneMinusExp - vt * t;
+      }
+
+      function evalVelocityY(t, vy0, vt, beta) {
+        const bt = beta * t;
+        if (bt < 1e-5) {
+          const expTerm = 1.0 - bt + 0.5 * bt * bt;
+          return (vy0 + vt) * expTerm - vt;
+        }
+        return (vy0 + vt) * Math.exp(-bt) - vt;
+      }
+
+      function getCharacteristicMetrics() {
+        const key = `${state.thetaDeg}|${state.v0}|${state.k}|${state.m}|${state.g}`;
+        if (cachedMetrics && cachedKey === key) {
+          return cachedMetrics;
+        }
+
+        const { thetaDeg, v0, k, m, g } = state;
+        const rad = (thetaDeg * Math.PI) / 180.0;
+        const cos0 = Math.cos(rad);
+        const sin0 = Math.sin(rad);
+
+        const vx0 = v0 * cos0;
+        const vy0 = v0 * sin0;
+        const beta = k / m;
+        const vt = g / beta; // 竖直终端速度 mg / k
+        const xInf = vx0 / beta; // 水平极限渐近线 m v0 cos(θ0) / k
+
+        // 最高点时间 t_peak = (1/β) ln(1 + β v_y0 / g)
+        const tPeak = Math.log1p((beta * vy0) / g) / beta;
+        const xPeak = xInf * (-Math.expm1(-beta * tPeak));
+        const yMax = evalPositionY(tPeak, vy0, vt, beta, g);
+
+        // 高精度求解落地点时间 t_impact (y(t_impact) = 0, t_impact > tPeak)
+        let tLo = tPeak;
+        let step = Math.max(tPeak, 0.1);
+        let tHi = tPeak + step;
+        while (evalPositionY(tHi, vy0, vt, beta, g) > 0) {
+          tLo = tHi;
+          step *= 1.6;
+          tHi += step;
+          if (tHi > 2000) break;
+        }
+
+        // 二分 + 牛顿混合迭代（44次迭代达到双精度浮点极限）
+        let tRoot = 0.5 * (tLo + tHi);
+        for (let iter = 0; iter < 44; iter++) {
+          const fVal = evalPositionY(tRoot, vy0, vt, beta, g);
+          if (Math.abs(fVal) < 1e-12) break;
+          if (fVal > 0) {
+            tLo = tRoot;
+          } else {
+            tHi = tRoot;
+          }
+          const dfVal = evalVelocityY(tRoot, vy0, vt, beta); // dy/dt = vy < 0
+          if (dfVal < -1e-9) {
+            const newtonCandidate = tRoot - fVal / dfVal;
+            if (newtonCandidate > tLo && newtonCandidate < tHi) {
+              tRoot = newtonCandidate;
+              continue;
+            }
+          }
+          tRoot = 0.5 * (tLo + tHi);
+        }
+
+        const tImpact = tRoot;
+        const range = xInf * (-Math.expm1(-beta * tImpact));
+        const vxLand = vx0 * Math.exp(-beta * tImpact);
+        const vyLand = evalVelocityY(tImpact, vy0, vt, beta);
+        const speedLand = Math.hypot(vxLand, vyLand);
+        const landAngleDeg = (Math.atan2(Math.abs(vyLand), Math.max(1e-12, vxLand)) * 180.0) / Math.PI;
+
+        // 真空对照特征量 (k = 0)
+        const tPeakVac = vy0 / g;
+        const tImpactVac = (2.0 * vy0) / g;
+        const yMaxVac = (vy0 * vy0) / (2.0 * g);
+        const rangeVac = vx0 * tImpactVac;
+
+        // 深渊模式下的最长观察时间（足够让水平速度衰减至 <1.5% 并贴近渐近线垂直下坠）
+        const tAbyssMax = Math.max(tImpact * 1.9, 4.6 / beta);
+
+        cachedMetrics = {
+          rad, cos0, sin0, vx0, vy0, beta, vt, xInf,
+          tPeak, xPeak, yMax,
+          tImpact, range, vxLand, vyLand, speedLand, landAngleDeg,
+          tPeakVac, tImpactVac, yMaxVac, rangeVac,
+          tAbyssMax
+        };
+        cachedKey = key;
+        return cachedMetrics;
+      }
+
+      function getSimulationEndTime(metrics) {
+        return state.abyssMode ? metrics.tAbyssMax : metrics.tImpact;
+      }
+
+      function evaluateAtTime(t, metrics) {
+        const { vx0, vy0, beta, vt, xInf, tPeak, tImpact, tImpactVac } = metrics;
+        const { m, g, v0 } = state;
+
+        const bt = beta * t;
+        const expTerm = Math.exp(-bt);
+        const oneMinusExp = bt < 1e-4 ? (bt - 0.5 * bt * bt + (bt * bt * bt) / 6.0) : -Math.expm1(-bt);
+
+        const x = xInf * oneMinusExp;
+        const y = evalPositionY(t, vy0, vt, beta, g);
+        const vx = vx0 * expTerm;
+        const vy = evalVelocityY(t, vy0, vt, beta);
+        const speed = Math.hypot(vx, vy);
+        const angleDeg = (Math.atan2(vy, Math.max(1e-12, vx)) * 180.0) / Math.PI;
+
+        // 机械能 E(t) = 0.5*m*v^2 + m*g*y
+        const E0 = 0.5 * m * v0 * v0;
+        const kinetic = 0.5 * m * speed * speed;
+        const potential = m * g * y;
+        const totalEnergy = kinetic + potential;
+        const energyRatio = E0 > 0 ? totalEnergy / E0 : 1;
+        const kineticRatio = E0 > 0 ? kinetic / E0 : 0;
+        const potentialRatio = E0 > 0 ? potential / E0 : 0;
+
+        // 真空对照球在时刻 t 的位置（普通模式下落地即停在地面，深渊模式下继续下落）
+        const yVacRaw = vy0 * t - 0.5 * g * t * t;
+        const vacStopped = !state.abyssMode && t >= tImpactVac;
+        const xVac = vacStopped ? (vx0 * tImpactVac) : (vx0 * t);
+        const yVac = vacStopped ? 0 : yVacRaw;
+
+        let stageText = '爬升阶段 (v_y > 0)';
+        if (Math.abs(t - tPeak) < 0.03) {
+          stageText = '最高点 (v_y = 0)';
+        } else if (!state.abyssMode && t >= tImpact - 1e-4) {
+          stageText = '已着地 (y = 0)';
+        } else if (y < 0) {
+          stageText = '深渊下坠 (x → x_∞)';
+        } else if (t > tPeak) {
+          stageText = '俯冲下落 (v_y < 0)';
+        }
+
+        return {
+          x, y, vx, vy, speed, angleDeg,
+          energyRatio, kineticRatio, potentialRatio,
+          xVac, yVac, stageText
+        };
+      }
+
+      // ==========================================================================
+      // 3. DOM 节点绑定
+      // ==========================================================================
+      const ballisticsCanvas = document.getElementById('ballisticsCanvas');
+      const velChartCanvas = document.getElementById('velChartCanvas');
+      const energyChartCanvas = document.getElementById('energyChartCanvas');
+
+      const angleSlider = document.getElementById('angleSlider');
+      const v0Slider = document.getElementById('v0Slider');
+      const kSlider = document.getElementById('kSlider');
+      const mSlider = document.getElementById('mSlider');
+      const timeSlider = document.getElementById('timeSlider');
+
+      const angleVal = document.getElementById('angleVal');
+      const v0Val = document.getElementById('v0Val');
+      const kVal = document.getElementById('kVal');
+      const mVal = document.getElementById('mVal');
+      const timeVal = document.getElementById('timeVal');
+      const peakTimeHint = document.getElementById('peakTimeHint');
+      const endTimeHint = document.getElementById('endTimeHint');
+
+      const playPauseBtn = document.getElementById('playPauseBtn');
+      const playPauseIcon = document.getElementById('playPauseIcon');
+      const playPauseText = document.getElementById('playPauseText');
+      const slowMoBtn = document.getElementById('slowMoBtn');
+      const resetBtn = document.getElementById('resetBtn');
+
+      const toggleVacuum = document.getElementById('toggleVacuum');
+      const toggleVectors = document.getElementById('toggleVectors');
+      const toggleAsymptote = document.getElementById('toggleAsymptote');
+      const toggleAbyss = document.getElementById('toggleAbyss');
+      const presetBtns = document.querySelectorAll('.preset-btn');
+
+      // 遥测输出节点
+      const betaBadge = document.getElementById('betaBadge');
+      const vtBadge = document.getElementById('vtBadge');
+      const statPos = document.getElementById('statPos');
+      const statPosVac = document.getElementById('statPosVac');
+      const statSpeed = document.getElementById('statSpeed');
+      const statVelComp = document.getElementById('statVelComp');
+      const statAngle = document.getElementById('statAngle');
+      const statStage = document.getElementById('statStage');
+      const statYmax = document.getElementById('statYmax');
+      const statYmaxVac = document.getElementById('statYmaxVac');
+      const statRange = document.getElementById('statRange');
+      const statRangeVac = document.getElementById('statRangeVac');
+      const statLandAngle = document.getElementById('statLandAngle');
+      const statLandSpeed = document.getElementById('statLandSpeed');
+      const statXinf = document.getElementById('statXinf');
+      const statAsymRatio = document.getElementById('statAsymRatio');
+      const velChartNote = document.getElementById('velChartNote');
+      const energyChartNote = document.getElementById('energyChartNote');
+
+      // ==========================================================================
+      // 4. Canvas 高分屏自适应与绘图基础工具
+      // ==========================================================================
+      function setupHiDPICanvas(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(10, rect.width);
+        const h = Math.max(10, rect.height);
+        const targetW = Math.round(w * dpr);
+        const targetH = Math.round(h * dpr);
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+        }
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, w, h };
+      }
+
+      function computeNiceStep(range, targetTicks) {
+        if (range <= 0) return 1;
+        const rough = range / targetTicks;
+        const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+        const norm = rough / mag;
+        let nice = 1;
+        if (norm <= 1) nice = 1;
+        else if (norm <= 2) nice = 2;
+        else if (norm <= 2.5) nice = 2.5;
+        else if (norm <= 5) nice = 5;
+        else nice = 10;
+        return nice * mag;
+      }
+
+      function drawRoundRect(ctx, x, y, w, h, r) {
+        const rad = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rad, y);
+        ctx.lineTo(x + w - rad, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+        ctx.lineTo(x + w, y + h - rad);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+        ctx.lineTo(x + rad, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+        ctx.lineTo(x, y + rad);
+        ctx.quadraticCurveTo(x, y, x + rad, y);
+        ctx.closePath();
+      }
+
+      // 绘制任意角度矢量箭头与防遮挡标签
+      function drawVector2D(ctx, x1, y1, dxPx, dyPx, color, label) {
+        const len = Math.hypot(dxPx, dyPx);
+        if (len < 4) return;
+        const x2 = x1 + dxPx;
+        const y2 = y1 + dyPx;
+        const ang = Math.atan2(dyPx, dxPx);
+        const head = Math.min(11, Math.max(6.5, len * 0.25));
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2 - head * 0.65 * Math.cos(ang), y2 - head * 0.65 * Math.sin(ang));
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - head * Math.cos(ang - Math.PI / 6), y2 - head * Math.sin(ang - Math.PI / 6));
+        ctx.lineTo(x2 - head * Math.cos(ang + Math.PI / 6), y2 - head * Math.sin(ang + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+
+        if (label) {
+          ctx.font = '600 10.5px ui-monospace, SFMono-Regular, monospace';
+          const tw = ctx.measureText(label).width + 10;
+          const th = 17;
+          const offsetX = Math.cos(ang) >= 0 ? 7 : (-tw - 7);
+          const offsetY = Math.sin(ang) >= 0 ? 4 : (-th - 4);
+          const lx = x2 + offsetX;
+          const ly = y2 + offsetY;
+
+          ctx.fillStyle = 'rgba(5, 9, 20, 0.86)';
+          drawRoundRect(ctx, lx, ly, tw, th, 4);
+          ctx.fill();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.fillStyle = color;
+          ctx.textAlign = 'left';
+          ctx.fillText(label, lx + 5, ly + 12);
+        }
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 5. 主弹道视口渲染 (ballisticsCanvas)
+      // ==========================================================================
+      function renderBallisticsViewport(metrics, inst) {
+        const { ctx, w, h } = setupHiDPICanvas(ballisticsCanvas);
+        const {
+          xInf, tPeak, xPeak, yMax, tImpact, range, landAngleDeg,
+          yMaxVac, rangeVac, tImpactVac, tAbyssMax, vt
+        } = metrics;
+        const { x, y, vx, vy, speed, xVac, yVac } = inst;
+
+        // 1. 夜晚高空渐变背景
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+        bgGrad.addColorStop(0.0, '#03060f');
+        bgGrad.addColorStop(0.55, '#081122');
+        bgGrad.addColorStop(1.0, '#0f1e38');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // 2. 视口物理量程与坐标映射
+        const padLeft = Math.max(54, Math.min(72, w * 0.08));
+        const padRight = Math.max(28, w * 0.04);
+        const padTop = 38;
+        const padBottom = state.abyssMode ? 26 : 44;
+
+        const plotW = Math.max(120, w - padLeft - padRight);
+        const plotH = Math.max(120, h - padTop - padBottom);
+
+        // 水平范围始终完整展示水平渐近线 x_∞
+        const worldMaxX = Math.max(10, xInf * 1.15);
+
+        // 竖直范围：普通模式 [0, worldTopY]，深渊模式 [worldBottomY, worldTopY]
+        const refTopY = state.showVacuum
+          ? Math.max(yMax, Math.min(yMaxVac, yMax * 1.9))
+          : yMax;
+        const worldTopY = Math.max(5, refTopY * 1.24);
+
+        let worldBottomY = 0;
+        if (state.abyssMode) {
+          const endInst = evaluateAtTime(tAbyssMax, metrics);
+          worldBottomY = Math.min(endInst.y * 1.08, -worldTopY * 1.35);
+        }
+        const worldSpanY = worldTopY - worldBottomY;
+
+        const scaleX = plotW / worldMaxX;
+        const scaleY = plotH / worldSpanY;
+        const toScreenX = (wx) => padLeft + wx * scaleX;
+        const toScreenY = (wy) => padTop + (worldTopY - wy) * scaleY;
+
+        const originX = toScreenX(0);
+        const groundY = toScreenY(0);
+
+        // 3. 坐标网格与科学刻度标尺
+        ctx.save();
+        const xStep = computeNiceStep(worldMaxX, Math.max(5, Math.floor(plotW / 90)));
+        const yStep = computeNiceStep(worldSpanY, Math.max(4, Math.floor(plotH / 52)));
+
+        ctx.font = '500 10px ui-monospace, monospace';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+        ctx.lineWidth = 1;
+
+        // 垂直距离网格
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#64748b';
+        for (let wx = 0; wx <= worldMaxX; wx += xStep) {
+          const sx = toScreenX(wx);
+          ctx.beginPath();
+          ctx.moveTo(sx, padTop);
+          ctx.lineTo(sx, padTop + plotH);
+          ctx.stroke();
+
+          if (!state.abyssMode && wx > 0) {
+            ctx.fillText(`${Math.round(wx)}m`, sx, groundY + 16);
+          }
+        }
+
+        // 水平高度网格
+        ctx.textAlign = 'right';
+        const firstYTick = Math.ceil(worldBottomY / yStep) * yStep;
+        for (let wy = firstYTick; wy <= worldTopY; wy += yStep) {
+          const sy = toScreenY(wy);
+          ctx.beginPath();
+          ctx.moveTo(padLeft, sy);
+          ctx.lineTo(padLeft + plotW, sy);
+          ctx.stroke();
+
+          ctx.fillStyle = Math.abs(wy) < 1e-6 ? '#22d3ee' : '#64748b';
+          const label = Math.abs(wy) < 1e-6 ? '0m' : `${Math.round(wy)}m`;
+          ctx.fillText(label, padLeft - 8, sy + 3.5);
+        }
+
+        // 左侧垂直坐标轴线
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+        ctx.beginPath();
+        ctx.moveTo(padLeft, padTop);
+        ctx.lineTo(padLeft, padTop + plotH);
+        ctx.stroke();
+        ctx.restore();
+
+        // 4. 水平极限渐近线 x = x_∞（红色竖直虚线 + 禁区斜纹阴影）
+        if (state.showAsymptote) {
+          const asymX = toScreenX(xInf);
+          ctx.save();
+          // 禁区淡红渐变背景
+          if (asymX < padLeft + plotW) {
+            const forbidGrad = ctx.createLinearGradient(asymX, 0, padLeft + plotW, 0);
+            forbidGrad.addColorStop(0, 'rgba(244, 63, 94, 0.14)');
+            forbidGrad.addColorStop(1, 'rgba(244, 63, 94, 0.02)');
+            ctx.fillStyle = forbidGrad;
+            ctx.fillRect(asymX, padTop, padLeft + plotW - asymX, plotH);
+          }
+
+          // 红色激光虚线
+          ctx.strokeStyle = '#f43f5e';
+          ctx.setLineDash([7, 5]);
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(asymX, padTop);
+          ctx.lineTo(asymX, padTop + plotH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 渐近线标签卡片
+          const asymText = `水平极限渐近线 x_∞ = ${xInf.toFixed(1)}m`;
+          ctx.font = '600 10.5px ui-monospace, monospace';
+          const tw = ctx.measureText(asymText).width + 14;
+          const bx = Math.min(w - tw - 8, Math.max(padLeft + 8, asymX - tw * 0.5));
+          const by = 8;
+
+          ctx.fillStyle = 'rgba(136, 19, 55, 0.88)';
+          drawRoundRect(ctx, bx, by, tw, 20, 5);
+          ctx.fill();
+          ctx.strokeStyle = '#fb7185';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffe4e6';
+          ctx.textAlign = 'center';
+          ctx.fillText(asymText, bx + tw / 2, by + 13.5);
+
+          // 深渊模式下额外标注垂直终端下坠提示
+          if (state.abyssMode) {
+            const abyssTagY = toScreenY(worldBottomY * 0.65);
+            ctx.fillStyle = '#fda4af';
+            ctx.font = '600 10.5px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(`贴近渐近线垂直下坠 (v → v_t = ${vt.toFixed(1)} m/s) →`, asymX - 8, abyssTagY);
+          }
+          ctx.restore();
+        }
+
+        // 5. 地面层 或 深渊悬崖层绘制
+        ctx.save();
+        if (!state.abyssMode) {
+          // 实心地面层
+          const groundGrad = ctx.createLinearGradient(0, groundY, 0, h);
+          groundGrad.addColorStop(0, '#0f172a');
+          groundGrad.addColorStop(1, '#03060f');
+          ctx.fillStyle = groundGrad;
+          ctx.fillRect(0, groundY, w, h - groundY);
+
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(padLeft, groundY);
+          ctx.lineTo(w - padRight, groundY);
+          ctx.stroke();
+        } else {
+          // 深渊模式：仅在左侧绘制悬崖发射平台，右侧为无底深渊，y = 0 为海平面虚线
+          ctx.fillStyle = '#0f172a';
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(0, groundY);
+          ctx.lineTo(originX + 26, groundY);
+          ctx.lineTo(originX + 14, h);
+          ctx.lineTo(0, h);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // y = 0 基准水平虚线
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.38)';
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(originX + 26, groundY);
+          ctx.lineTo(w - padRight, groundY);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = '#38bdf8';
+          ctx.font = '600 10px ui-monospace, monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText('发射基准面 y = 0m', w - padRight - 6, groundY - 5);
+        }
+        ctx.restore();
+
+        // 6. 真空无阻力对照弹道（虚线抛物线与幽灵炮弹）
+        if (state.showVacuum) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(padLeft, padTop, plotW, plotH);
+          ctx.clip();
+
+          const vacMaxT = state.abyssMode ? tAbyssMax : tImpactVac;
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+          ctx.setLineDash([5, 5]);
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          const vSteps = 90;
+          for (let i = 0; i <= vSteps; i++) {
+            const ti = (i / vSteps) * vacMaxT;
+            const vxPos = metrics.vx0 * ti;
+            const vyPos = metrics.vy0 * ti - 0.5 * state.g * ti * ti;
+            const sx = toScreenX(vxPos);
+            const sy = toScreenY(vyPos);
+            if (i === 0) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 幽灵对照炮弹当前位置
+          const gx = toScreenX(xVac);
+          const gy = toScreenY(yVac);
+          if (gx >= padLeft && gx <= padLeft + plotW && gy >= padTop && gy <= padTop + plotH) {
+            ctx.fillStyle = 'rgba(226, 232, 240, 0.35)';
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.arc(gx, gy, 6.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '500 10px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('真空对照 (k=0)', gx + 10, gy - 4);
+          }
+          ctx.restore();
+        }
+
+        // 7. 理论完整有阻力弹道（背景淡青色虚线）与已飞过流光尾迹
+        const simEndT = getSimulationEndTime(metrics);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(padLeft, padTop, plotW, plotH);
+        ctx.clip();
+
+        // 完整参考虚线
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.24)';
+        ctx.setLineDash([3, 3]);
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        const totalSteps = 130;
+        for (let i = 0; i <= totalSteps; i++) {
+          const ti = (i / totalSteps) * simEndT;
+          const pt = evaluateAtTime(ti, metrics);
+          const sx = toScreenX(pt.x);
+          const sy = toScreenY(pt.y);
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 已飞过的主弹道轨迹（渐变发光尾迹）
+        if (state.t > 0) {
+          const activeSteps = Math.max(2, Math.ceil((state.t / simEndT) * 140));
+          // 外层发光辉光
+          ctx.strokeStyle = 'rgba(34, 211, 238, 0.24)';
+          ctx.lineWidth = 7;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          for (let i = 0; i <= activeSteps; i++) {
+            const ti = (i / activeSteps) * state.t;
+            const pt = evaluateAtTime(ti, metrics);
+            const sx = toScreenX(pt.x);
+            const sy = toScreenY(pt.y);
+            if (i === 0) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
+          }
+          ctx.stroke();
+
+          // 内层高饱和弹道线
+          const trailGrad = ctx.createLinearGradient(originX, groundY, toScreenX(x), toScreenY(y));
+          trailGrad.addColorStop(0, '#0284c7');
+          trailGrad.addColorStop(0.5, '#22d3ee');
+          trailGrad.addColorStop(1, '#5eead4');
+          ctx.strokeStyle = trailGrad;
+          ctx.lineWidth = 2.8;
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // 8. 标注最高点 (Apex) 与落地点 (Impact)
+        renderKeyMarkers(ctx, toScreenX, toScreenY, groundY, metrics, scaleX, scaleY);
+
+        // 9. 绘制可随发射仰角 θ0 旋转的精细炮台底座与炮管 + 炮口火光特效
+        const screenLaunchAngle = Math.atan2(
+          metrics.vy0 * scaleY,
+          Math.max(1e-6, metrics.vx0 * scaleX)
+        );
+        renderArtilleryCannon(ctx, originX, groundY, screenLaunchAngle, state.thetaDeg, state.t);
+
+        // 10. 绘制按瞬时速度方向角旋转的炮弹与气流流线
+        const shellX = toScreenX(x);
+        const shellY = toScreenY(y);
+        const screenVelAngle = Math.atan2(-vy * scaleY, vx * scaleX); // Canvas Y轴向下故取 -vy
+        const isLanded = !state.abyssMode && state.t >= tImpact - 1e-4;
+
+        if (!isLanded && speed > 0.5) {
+          renderShellAirflow(ctx, shellX, shellY, screenVelAngle, speed / Math.max(state.v0, 1));
+        }
+        renderArtilleryShell(ctx, shellX, shellY, screenVelAngle);
+
+        // 11. 实时速度与受力矢量箭头（绿色 v、橙色 Ff = -kv、蓝色 mg）
+        if (state.showVectors) {
+          const vScale = Math.min(88, Math.min(plotW, plotH) * 0.22) / Math.max(state.v0, 1);
+          // 速度矢量 v（翠绿色）
+          if (speed > 0.2) {
+            drawVector2D(
+              ctx, shellX, shellY,
+              vx * vScale, -vy * vScale,
+              '#10b981', `v=${speed.toFixed(1)}m/s`
+            );
+          }
+
+          // 重力矢量 mg（天蓝色，恒定竖直向下）
+          const gPx = Math.min(54, Math.max(34, plotH * 0.14));
+          drawVector2D(ctx, shellX, shellY, 0, gPx, '#38bdf8', 'mg');
+
+          // 空气阻力矢量 Ff = -kv（橙红色，与速度严格反向）
+          const dragMag = state.k * speed;
+          const mgMag = state.m * state.g;
+          const dragPx = Math.min(115, (dragMag / Math.max(mgMag, 0.1)) * gPx);
+          if (dragPx > 4 && speed > 0.2) {
+            const ux = vx / speed;
+            const uy = vy / speed;
+            drawVector2D(
+              ctx, shellX, shellY,
+              -ux * dragPx, uy * dragPx,
+              '#f97316', `Ff=${dragMag.toFixed(1)}N`
+            );
+          }
+        }
+      }
+
+      // 绘制最高点与落地点地标注释
+      function renderKeyMarkers(ctx, toScreenX, toScreenY, groundY, metrics, scaleX, scaleY) {
+        const { xPeak, yMax, range, landAngleDeg, vxLand, vyLand } = metrics;
+
+        // A. 最高点 Apex 标记
+        const px = toScreenX(xPeak);
+        const py = toScreenY(yMax);
+        ctx.save();
+        // 垂直高度辅助虚线
+        ctx.strokeStyle = 'rgba(45, 212, 191, 0.35)';
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px, groundY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 最高点菱形节点
+        ctx.fillStyle = '#2dd4bf';
+        ctx.strokeStyle = '#040812';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(px, py - 5.5);
+        ctx.lineTo(px + 5.5, py);
+        ctx.lineTo(px, py + 5.5);
+        ctx.lineTo(px - 5.5, py);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 最高点信息胶囊
+        const apexText = `最高点 y_max = ${yMax.toFixed(1)}m`;
+        ctx.font = '600 10px ui-monospace, monospace';
+        const aw = ctx.measureText(apexText).width + 12;
+        const ax = Math.max(56, px - aw * 0.5);
+        const ay = Math.max(32, py - 24);
+        ctx.fillStyle = 'rgba(13, 148, 136, 0.25)';
+        drawRoundRect(ctx, ax, ay, aw, 17, 4);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(45, 212, 191, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = '#5eead4';
+        ctx.textAlign = 'center';
+        ctx.fillText(apexText, ax + aw * 0.5, ay + 11.5);
+        ctx.restore();
+
+        // B. 落地点 Impact 标记与着地倾角弧线
+        const rx = toScreenX(range);
+        ctx.save();
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(rx, groundY, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 绘制着地切线倾角弧线（直观对比 |θ_land| > θ_0）
+        const screenLandAng = Math.atan2(Math.abs(vyLand) * scaleY, Math.max(1e-6, vxLand * scaleX));
+        const arcR = 26;
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(rx, groundY);
+        ctx.lineTo(rx - arcR - 6, groundY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(rx, groundY, arcR, Math.PI, Math.PI + screenLandAng);
+        ctx.stroke();
+
+        // 射程与着地倾角标签
+        const landText = `射程 R=${range.toFixed(1)}m · 着地角 ${landAngleDeg.toFixed(1)}°`;
+        ctx.font = '600 10px ui-monospace, monospace';
+        const lw = ctx.measureText(landText).width + 12;
+        const lx = Math.max(60, rx - lw * 0.5);
+        const ly = groundY + (state.abyssMode ? -24 : 22);
+
+        ctx.fillStyle = 'rgba(120, 53, 15, 0.85)';
+        drawRoundRect(ctx, lx, ly, lw, 17, 4);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.65)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = '#fde68a';
+        ctx.textAlign = 'center';
+        ctx.fillText(landText, lx + lw * 0.5, ly + 11.5);
+        ctx.restore();
+      }
+
+      // 绘制炮台底座、随仰角旋转的炮管与炮口火光
+      function renderArtilleryCannon(ctx, ox, oy, screenAngleRad, thetaDeg, t) {
+        ctx.save();
+        // 1. 仰角量角器扇形刻度
+        const arcRadius = 40;
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.lineTo(ox + arcRadius + 8, oy);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(34, 211, 238, 0.1)';
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.arc(ox, oy, arcRadius, -screenAngleRad, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#22d3ee';
+        ctx.beginPath();
+        ctx.arc(ox, oy, arcRadius, -screenAngleRad, 0);
+        ctx.stroke();
+
+        ctx.fillStyle = '#7dd3fc';
+        ctx.font = '600 10px ui-monospace, monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`θ₀=${thetaDeg.toFixed(0)}°`, ox + arcRadius + 5, oy - 6);
+
+        // 2. 旋转炮管
+        ctx.save();
+        ctx.translate(ox, oy);
+        ctx.rotate(-screenAngleRad);
+
+        const barrelLen = 34;
+        // 炮管主体渐变
+        const barrelGrad = ctx.createLinearGradient(0, -5, 0, 5);
+        barrelGrad.addColorStop(0, '#94a3b8');
+        barrelGrad.addColorStop(0.4, '#e2e8f0');
+        barrelGrad.addColorStop(1, '#334155');
+
+        ctx.fillStyle = barrelGrad;
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 1.2;
+        drawRoundRect(ctx, -4, -4.5, barrelLen, 9, 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 炮口制退器加粗环
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(barrelLen - 5, -5.5, 5, 11);
+
+        // 3. 发射瞬间（t < 0.22s）炮口火光与烟雾粒子
+        if (t >= 0 && t < 0.22) {
+          const p = t / 0.22; // 0 -> 1
+          const flashAlpha = 1 - p;
+          const flashLen = 28 * (1 - p * 0.4);
+
+          // 橙黄炽热火焰锥
+          const flashGrad = ctx.createRadialGradient(barrelLen, 0, 1, barrelLen + flashLen * 0.4, 0, flashLen);
+          flashGrad.addColorStop(0, `rgba(255, 255, 255, ${flashAlpha})`);
+          flashGrad.addColorStop(0.35, `rgba(251, 191, 36, ${flashAlpha * 0.9})`);
+          flashGrad.addColorStop(0.75, `rgba(249, 115, 22, ${flashAlpha * 0.55})`);
+          flashGrad.addColorStop(1, 'rgba(249, 115, 22, 0)');
+
+          ctx.fillStyle = flashGrad;
+          ctx.beginPath();
+          ctx.moveTo(barrelLen, -4);
+          ctx.lineTo(barrelLen + flashLen, -13 * (1 - p * 0.3));
+          ctx.lineTo(barrelLen + flashLen * 1.15, 0);
+          ctx.lineTo(barrelLen + flashLen, 13 * (1 - p * 0.3));
+          ctx.lineTo(barrelLen, 4);
+          ctx.closePath();
+          ctx.fill();
+
+          // 扩散烟雾环
+          ctx.strokeStyle = `rgba(226, 232, 240, ${flashAlpha * 0.45})`;
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.ellipse(barrelLen + 8 + p * 16, 0, 4 + p * 6, 9 + p * 14, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // 4. 炮台装甲基座（覆盖炮管尾部枢轴）
+        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(ox, oy, 11, Math.PI, 0);
+        ctx.lineTo(ox + 15, oy + 7);
+        ctx.lineTo(ox - 15, oy + 7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#22d3ee';
+        ctx.beginPath();
+        ctx.arc(ox, oy, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // 绘制随瞬时速度角旋转的流线型炮弹
+      function renderArtilleryShell(ctx, cx, cy, screenAngleRad) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(screenAngleRad);
+
+        // 弹体周围发光光晕
+        const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, 18);
+        glow.addColorStop(0, 'rgba(34, 211, 238, 0.45)');
+        glow.addColorStop(1, 'rgba(34, 211, 238, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 流线型弹头轮廓
+        ctx.fillStyle = '#f8fafc';
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(11, 0);
+        ctx.quadraticCurveTo(4, -5.2, -8, -4.5);
+        ctx.lineTo(-8, 4.5);
+        ctx.quadraticCurveTo(4, 5.2, 11, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 弹头青色导引头与尾部高能环
+        ctx.fillStyle = '#22d3ee';
+        ctx.beginPath();
+        ctx.moveTo(11, 0);
+        ctx.quadraticCurveTo(7, -3.2, 4, -3.6);
+        ctx.lineTo(4, 3.6);
+        ctx.quadraticCurveTo(7, 3.2, 11, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(-8, -3.5, 2.5, 7);
+
+        ctx.restore();
+      }
+
+      // 绘制炮弹周围空气阻力流线特效
+      function renderShellAirflow(ctx, cx, cy, screenAngleRad, intensity) {
+        const alpha = Math.min(0.75, 0.18 + intensity * 0.55);
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(screenAngleRad);
+
+        // 头部激波弧
+        ctx.strokeStyle = `rgba(56, 189, 248, ${alpha})`;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(4, 0, 12, -Math.PI * 0.35, Math.PI * 0.35);
+        ctx.stroke();
+
+        // 两侧动态流线
+        const shift = state.flowPhase % 16;
+        [-8, 8].forEach((offsetY) => {
+          const grad = ctx.createLinearGradient(8 - shift, offsetY, -24 - shift, offsetY);
+          grad.addColorStop(0, 'rgba(34, 211, 238, 0)');
+          grad.addColorStop(0.5, `rgba(34, 211, 238, ${alpha * 0.85})`);
+          grad.addColorStop(1, 'rgba(34, 211, 238, 0)');
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(8 - shift * 0.5, offsetY);
+          ctx.lineTo(-22 - shift * 0.5, offsetY * 1.15);
+          ctx.stroke();
+        });
+
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 6. 底部双联同步数据图表渲染
+      // ==========================================================================
+      function renderVelocityChart(metrics, inst) {
+        const { ctx, w, h } = setupHiDPICanvas(velChartCanvas);
+        const { vx0, vy0, vt, tPeak } = metrics;
+        const { vx, vy } = inst;
+        const simEndT = getSimulationEndTime(metrics);
+
+        const pad = { top: 20, right: 20, bottom: 30, left: 48 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+
+        const maxPosV = Math.max(vx0, vy0) * 1.14;
+        const endVy = evalVelocityY(simEndT, vy0, vt, metrics.beta);
+        const showVtLine = vt <= maxPosV * 1.65;
+        const minNegV = -Math.max(Math.abs(endVy) * 1.2, showVtLine ? vt * 1.12 : Math.abs(endVy) * 1.25, 10);
+        const spanV = maxPosV - minNegV;
+
+        const toX = (tVal) => pad.left + (tVal / simEndT) * plotW;
+        const toY = (vVal) => pad.top + ((maxPosV - vVal) / spanV) * plotH;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#040812';
+        ctx.fillRect(0, 0, w, h);
+
+        // 网格与零速度轴
+        const zeroY = toY(0);
+        const tStep = computeNiceStep(simEndT, 5);
+        const vStep = computeNiceStep(spanV, 5);
+
+        ctx.save();
+        ctx.font = '500 10px ui-monospace, monospace';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+        ctx.lineWidth = 1;
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#64748b';
+        for (let tv = 0; tv <= simEndT; tv += tStep) {
+          const px = toX(tv);
+          ctx.beginPath();
+          ctx.moveTo(px, pad.top);
+          ctx.lineTo(px, pad.top + plotH);
+          ctx.stroke();
+          ctx.fillText(tv === 0 ? '0' : `${tv.toFixed(1)}s`, px, pad.top + plotH + 15);
+        }
+
+        ctx.textAlign = 'right';
+        const firstV = Math.ceil(minNegV / vStep) * vStep;
+        for (let vv = firstV; vv <= maxPosV; vv += vStep) {
+          if (Math.abs(vv) < vStep * 0.25) continue;
+          const py = toY(vv);
+          ctx.beginPath();
+          ctx.moveTo(pad.left, py);
+          ctx.lineTo(pad.left + plotW, py);
+          ctx.stroke();
+          ctx.fillStyle = '#64748b';
+          ctx.fillText(`${Math.round(vv)}`, pad.left - 6, py + 3.5);
+        }
+
+        // v = 0 横轴
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, zeroY);
+        ctx.lineTo(pad.left + plotW, zeroY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.stroke();
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('0', pad.left - 6, zeroY + 3.5);
+        ctx.restore();
+
+        // 终端速度 -vt 参考线
+        if (showVtLine) {
+          const vtY = toY(-vt);
+          ctx.save();
+          ctx.strokeStyle = 'rgba(244, 63, 94, 0.55)';
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(pad.left, vtY);
+          ctx.lineTo(pad.left + plotW, vtY);
+          ctx.stroke();
+
+          ctx.fillStyle = '#fda4af';
+          ctx.font = '600 10px ui-monospace, monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText(`终端速度 -v_t = -${vt.toFixed(1)} m/s`, pad.left + plotW - 4, vtY - 4);
+          ctx.restore();
+        }
+
+        // 最高点 vy = 0 时刻标记
+        const peakX = toX(tPeak);
+        ctx.save();
+        ctx.fillStyle = '#2dd4bf';
+        ctx.beginPath();
+        ctx.arc(peakX, zeroY, 3.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = '600 9.5px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`t_peak=${tPeak.toFixed(2)}s`, peakX, zeroY - 7);
+        ctx.restore();
+
+        // 绘制完整背景虚线 + 已演进实线：vx(t) (青色) 与 vy(t) (翠绿色)
+        const steps = 110;
+        drawCurvePair(ctx, steps, simEndT, state.t, toX, toY, (ti) => vx0 * Math.exp(-metrics.beta * ti), '#22d3ee');
+        drawCurvePair(ctx, steps, simEndT, state.t, toX, toY, (ti) => evalVelocityY(ti, vy0, vt, metrics.beta), '#10b981');
+
+        // 图例角标
+        ctx.save();
+        ctx.font = '600 10px ui-monospace, monospace';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#22d3ee';
+        ctx.fillText(`vx(t) = ${vx.toFixed(1)} m/s`, pad.left + 8, pad.top + 13);
+        ctx.fillStyle = '#10b981';
+        ctx.fillText(`vy(t) = ${vy >= 0 ? '+' : ''}${vy.toFixed(1)} m/s`, pad.left + 8, pad.top + 27);
+        ctx.restore();
+
+        // 当前时刻光标点
+        drawCursorDot(ctx, toX(state.t), toY(vx), '#22d3ee');
+        drawCursorDot(ctx, toX(state.t), toY(vy), '#10b981');
+      }
+
+      function renderEnergyChart(metrics, inst) {
+        const { ctx, w, h } = setupHiDPICanvas(energyChartCanvas);
+        const simEndT = getSimulationEndTime(metrics);
+
+        const pad = { top: 20, right: 20, bottom: 30, left: 48 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+
+        // 深渊模式下势能可能低于 0，自动扩展底部刻度
+        const endInst = evaluateAtTime(simEndT, metrics);
+        const minRatio = Math.min(0, endInst.energyRatio * 1.12, endInst.potentialRatio * 1.12);
+        const maxRatio = 1.08;
+        const spanRatio = maxRatio - minRatio;
+
+        const toX = (tVal) => pad.left + (tVal / simEndT) * plotW;
+        const toY = (rVal) => pad.top + ((maxRatio - rVal) / spanRatio) * plotH;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#040812';
+        ctx.fillRect(0, 0, w, h);
+
+        // 网格线
+        const tStep = computeNiceStep(simEndT, 5);
+        const yTicks = [1.0, 0.75, 0.5, 0.25, 0.0];
+        if (minRatio < -0.1) {
+          yTicks.push(-0.25, -0.5, -1.0);
+        }
+
+        ctx.save();
+        ctx.font = '500 10px ui-monospace, monospace';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+        ctx.lineWidth = 1;
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#64748b';
+        for (let tv = 0; tv <= simEndT; tv += tStep) {
+          const px = toX(tv);
+          ctx.beginPath();
+          ctx.moveTo(px, pad.top);
+          ctx.lineTo(px, pad.top + plotH);
+          ctx.stroke();
+          ctx.fillText(tv === 0 ? '0' : `${tv.toFixed(1)}s`, px, pad.top + plotH + 15);
+        }
+
+        ctx.textAlign = 'right';
+        yTicks.forEach((yv) => {
+          if (yv < minRatio || yv > maxRatio) return;
+          const py = toY(yv);
+          ctx.strokeStyle = yv === 0 ? 'rgba(148, 163, 184, 0.42)' : 'rgba(148, 163, 184, 0.08)';
+          ctx.beginPath();
+          ctx.moveTo(pad.left, py);
+          ctx.lineTo(pad.left + plotW, py);
+          ctx.stroke();
+
+          ctx.fillStyle = yv === 1.0 ? '#c084fc' : '#64748b';
+          ctx.fillText(`${Math.round(yv * 100)}%`, pad.left - 6, py + 3.5);
+        });
+
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.stroke();
+        ctx.restore();
+
+        // 动能 K/E0 (淡青虚线) 与势能 U/E0 (淡绿虚线)
+        const steps = 110;
+        ctx.save();
+        ctx.setLineDash([4, 3]);
+        ctx.lineWidth = 1.4;
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const ti = (i / steps) * simEndT;
+          const pt = evaluateAtTime(ti, metrics);
+          const sx = toX(ti);
+          const sy = toY(pt.kineticRatio);
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(45, 212, 191, 0.55)';
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const ti = (i / steps) * simEndT;
+          const pt = evaluateAtTime(ti, metrics);
+          const sx = toX(ti);
+          const sy = toY(pt.potentialRatio);
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // 总机械能 E(t)/E0（紫罗兰高亮曲线 + 面积填充）
+        drawCurvePair(ctx, steps, simEndT, state.t, toX, toY, (ti) => evaluateAtTime(ti, metrics).energyRatio, '#c084fc');
+
+        // 能量耗散阴影区域（从 100% 顶部向下到 E(t)/E0）
+        if (state.t > 0) {
+          ctx.save();
+          const activeSteps = Math.max(2, Math.ceil((state.t / simEndT) * 70));
+          ctx.beginPath();
+          ctx.moveTo(toX(0), toY(1.0));
+          for (let i = 0; i <= activeSteps; i++) {
+            const ti = (i / activeSteps) * state.t;
+            const er = evaluateAtTime(ti, metrics).energyRatio;
+            ctx.lineTo(toX(ti), toY(er));
+          }
+          ctx.lineTo(toX(state.t), toY(1.0));
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(192, 132, 252, 0.14)';
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // 角标读数
+        ctx.save();
+        ctx.font = '600 10px ui-monospace, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#c084fc';
+        ctx.fillText(`总机械能 E/E₀ = ${(inst.energyRatio * 100).toFixed(1)}%`, pad.left + plotW - 6, pad.top + 14);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText(`动能 K/E₀ = ${(inst.kineticRatio * 100).toFixed(1)}% · 势能 U/E₀ = ${(inst.potentialRatio * 100).toFixed(1)}%`, pad.left + plotW - 6, pad.top + 28);
+        ctx.restore();
+
+        drawCursorDot(ctx, toX(state.t), toY(inst.energyRatio), '#c084fc');
+      }
+
+      function drawCurvePair(ctx, steps, maxT, curT, toX, toY, fn, color) {
+        // 完整参考虚线
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.28;
+        ctx.setLineDash([3, 3]);
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const ti = (i / steps) * maxT;
+          const px = toX(ti);
+          const py = toY(fn(ti));
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // 已演进高亮实线
+        if (curT > 0) {
+          ctx.save();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          const activeSteps = Math.max(2, Math.ceil((curT / maxT) * steps));
+          for (let i = 0; i <= activeSteps; i++) {
+            const ti = (i / activeSteps) * curT;
+            const px = toX(ti);
+            const py = toY(fn(ti));
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      function drawCursorDot(ctx, cx, cy, color) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.28;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 7.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 7. 遥测数据与 UI 控件同步刷新
+      // ==========================================================================
+      function updateUI(metrics, inst) {
+        const {
+          beta, vt, xInf, tPeak, yMax, tImpact, range, speedLand, landAngleDeg,
+          yMaxVac, rangeVac
+        } = metrics;
+        const { x, y, vx, vy, speed, angleDeg, xVac, yVac, stageText } = inst;
+
+        const simEndT = getSimulationEndTime(metrics);
+        const progress = simEndT > 0 ? Math.min(1000, Math.round((state.t / simEndT) * 1000)) : 0;
+        timeSlider.value = progress;
+        timeVal.textContent = `${state.t.toFixed(2)} s / ${simEndT.toFixed(2)} s`;
+        peakTimeHint.textContent = `最高点 ${tPeak.toFixed(2)}s`;
+        endTimeHint.textContent = state.abyssMode ? `深渊 ${simEndT.toFixed(2)}s` : `落地 ${tImpact.toFixed(2)}s`;
+
+        betaBadge.textContent = `β = ${beta.toFixed(3)} s⁻¹`;
+        vtBadge.textContent = `v_t = ${vt.toFixed(1)} m/s`;
+
+        statPos.textContent = `(${x.toFixed(1)}, ${y.toFixed(1)}) m`;
+        statPosVac.textContent = `真空: (${xVac.toFixed(1)}, ${yVac.toFixed(1)}) m`;
+
+        statSpeed.textContent = `${speed.toFixed(2)} m/s`;
+        statVelComp.textContent = `vx=${vx.toFixed(1)}, vy=${vy >= 0 ? '+' : ''}${vy.toFixed(1)}`;
+
+        statAngle.textContent = `${angleDeg >= 0 ? '+' : ''}${angleDeg.toFixed(1)}°`;
+        statStage.textContent = stageText;
+
+        statYmax.textContent = `${yMax.toFixed(2)} m`;
+        statYmaxVac.textContent = `真空高度: ${yMaxVac.toFixed(2)} m`;
+
+        statRange.textContent = `${range.toFixed(2)} m`;
+        statRangeVac.textContent = `真空射程: ${rangeVac.toFixed(2)} m`;
+
+        statLandAngle.textContent = `${landAngleDeg.toFixed(1)}° > ${state.thetaDeg.toFixed(1)}°`;
+        statLandSpeed.textContent = `着地速率: ${speedLand.toFixed(1)} m/s`;
+
+        statXinf.innerHTML = `${xInf.toFixed(2)} m <span style="font-size:0.74rem;font-weight:400;color:#fecdd3;">(无论下落多深都无法越过此竖直线)</span>`;
+        statAsymRatio.textContent = `射程占极限 ${((range / xInf) * 100).toFixed(1)}%`;
+
+        velChartNote.textContent = `t_peak = ${tPeak.toFixed(2)} s`;
+        const landEnergyLoss = (1 - (speedLand * speedLand) / (state.v0 * state.v0)) * 100;
+        energyChartNote.textContent = `着地机械能耗散: ${landEnergyLoss.toFixed(1)}%`;
+      }
+
+      function renderAll() {
+        const metrics = getCharacteristicMetrics();
+        const simEndT = getSimulationEndTime(metrics);
+        if (state.t > simEndT) {
+          state.t = simEndT;
+        }
+        const inst = evaluateAtTime(state.t, metrics);
+        updateUI(metrics, inst);
+        renderBallisticsViewport(metrics, inst);
+        renderVelocityChart(metrics, inst);
+        renderEnergyChart(metrics, inst);
+      }
+
+      // ==========================================================================
+      // 8. 动画主循环与交互事件监听
+      // ==========================================================================
+      function setPlayState(playing) {
+        state.isPlaying = playing;
+        playPauseIcon.textContent = playing ? '❚❚' : '▶';
+        playPauseText.textContent = playing ? '暂停' : '播放';
+      }
+
+      function resetLaunch(autoPlay = true) {
+        state.t = 0;
+        setPlayState(autoPlay);
+        renderAll();
+      }
+
+      function animate(timestamp) {
+        try {
+          if (state.lastFrameTime === null) {
+            state.lastFrameTime = timestamp;
+          }
+          const rawDt = (timestamp - state.lastFrameTime) / 1000;
+          state.lastFrameTime = timestamp;
+          const dt = Math.min(rawDt, 0.05);
+
+          const speedMult = state.slowMo ? 0.5 : 1.0;
+          if (state.isPlaying) {
+            state.flowPhase += dt * 45 * speedMult;
+            const metrics = getCharacteristicMetrics();
+            const simEndT = getSimulationEndTime(metrics);
+            state.t += dt * speedMult;
+            if (state.t >= simEndT) {
+              state.t = simEndT;
+              setPlayState(false);
+            }
+          }
+
+          renderAll();
+        } catch (err) {
+          console.error('渲染循环异常:', err);
+        }
+        requestAnimationFrame(animate);
+      }
+
+      function syncSliderLabels() {
+        angleVal.textContent = `${state.thetaDeg.toFixed(1)}°`;
+        v0Val.textContent = `${state.v0.toFixed(1)} m/s`;
+        kVal.textContent = `${state.k.toFixed(2)} N·s/m`;
+        mVal.textContent = `${state.m.toFixed(1)} kg`;
+      }
+
+      function handleParamInput() {
+        presetBtns.forEach((b) => b.classList.remove('active'));
+        state.thetaDeg = parseFloat(angleSlider.value);
+        state.v0 = parseFloat(v0Slider.value);
+        state.k = parseFloat(kSlider.value);
+        state.m = parseFloat(mSlider.value);
+        cachedKey = ''; // 清除特征缓存
+        syncSliderLabels();
+        resetLaunch(true);
+      }
+
+      angleSlider.addEventListener('input', handleParamInput);
+      v0Slider.addEventListener('input', handleParamInput);
+      kSlider.addEventListener('input', handleParamInput);
+      mSlider.addEventListener('input', handleParamInput);
+
+      // 工况预设点击
+      presetBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const cfg = PRESETS[btn.dataset.preset];
+          if (!cfg) return;
+
+          presetBtns.forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          state.m = cfg.m;
+          state.k = cfg.k;
+          state.v0 = cfg.v0;
+          state.thetaDeg = cfg.thetaDeg;
+
+          mSlider.value = cfg.m;
+          kSlider.value = cfg.k;
+          v0Slider.value = cfg.v0;
+          angleSlider.value = cfg.thetaDeg;
+
+          cachedKey = '';
+          syncSliderLabels();
+          resetLaunch(true);
+        });
+      });
+
+      // 时间轴拖动
+      timeSlider.addEventListener('input', (e) => {
+        const metrics = getCharacteristicMetrics();
+        const simEndT = getSimulationEndTime(metrics);
+        state.t = (Number(e.target.value) / 1000) * simEndT;
+        setPlayState(false);
+        renderAll();
+      });
+
+      // 播放/暂停
+      playPauseBtn.addEventListener('click', () => {
+        const metrics = getCharacteristicMetrics();
+        const simEndT = getSimulationEndTime(metrics);
+        if (!state.isPlaying && state.t >= simEndT - 0.002) {
+          state.t = 0;
+        }
+        setPlayState(!state.isPlaying);
+      });
+
+      // 0.5x 慢动作切换
+      slowMoBtn.addEventListener('click', () => {
+        state.slowMo = !state.slowMo;
+        slowMoBtn.classList.toggle('slow-on', state.slowMo);
+      });
+
+      // 重置发射
+      resetBtn.addEventListener('click', () => {
+        resetLaunch(true);
+      });
+
+      // 视觉图层开关
+      toggleVacuum.addEventListener('change', (e) => {
+        state.showVacuum = e.target.checked;
+        renderAll();
+      });
+
+      toggleVectors.addEventListener('change', (e) => {
+        state.showVectors = e.target.checked;
+        renderAll();
+      });
+
+      toggleAsymptote.addEventListener('change', (e) => {
+        state.showAsymptote = e.target.checked;
+        renderAll();
+      });
+
+      toggleAbyss.addEventListener('change', (e) => {
+        state.abyssMode = e.target.checked;
+        // 切换深渊模式时自动重新播放完整演化过程，便于观察垂直渐近下坠
+        resetLaunch(true);
+      });
+
+      // 空格键便捷控制播放/暂停
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && document.activeElement.tagName !== 'BUTTON' && document.activeElement.tagName !== 'INPUT') {
+          e.preventDefault();
+          playPauseBtn.click();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        renderAll();
+      });
+
+      window.onload = function () {
+        syncSliderLabels();
+        renderAll();
+        requestAnimationFrame(animate);
+      };
+    })();
+  </script>
+</body>
+</html>

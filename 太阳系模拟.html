@@ -1,0 +1,2461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>太阳系天体力学与开普勒定律交互实验室</title>
+  <style>
+    /* ==========================================================================
+       1. 深空天文台暗色主题设计系统 (#050814)
+       ========================================================================== */
+    :root {
+      --bg-void: #050814;
+      --bg-deep: #080d1e;
+      --bg-panel: rgba(13, 20, 38, 0.92);
+      --bg-sub: rgba(8, 13, 26, 0.82);
+      --border-dim: rgba(148, 163, 184, 0.16);
+      --border-glow: rgba(56, 189, 248, 0.4);
+
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --c-cyan: #38bdf8;
+      --c-gold: #f59e0b;
+      --c-emerald: #10b981;
+      --c-rose: #f43f5e;
+      --c-magenta: #e879f9;
+      --c-violet: #a78bfa;
+
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 7px;
+      --shadow-card: 0 14px 36px -10px rgba(2, 5, 16, 0.9);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background-color: var(--bg-void);
+      background-image:
+        radial-gradient(circle at 14% 0%, rgba(56, 189, 248, 0.11) 0%, transparent 42%),
+        radial-gradient(circle at 86% 4%, rgba(245, 158, 11, 0.09) 0%, transparent 44%);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .math-i {
+      font-family: "Times New Roman", Georgia, serif;
+      font-style: italic;
+    }
+
+    /* 数学分式与根式排版 */
+    .frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      margin: 0 2px;
+      font-size: 0.84em;
+      line-height: 1.05;
+    }
+    .frac > span:first-child {
+      border-bottom: 1px solid currentColor;
+      padding: 0 3px 1px;
+    }
+    .frac > span:last-child {
+      padding: 1px 3px 0;
+    }
+
+    .sqrt-box {
+      display: inline-flex;
+      align-items: center;
+      vertical-align: middle;
+    }
+    .sqrt-inner {
+      border-top: 1px solid currentColor;
+      padding: 1px 2px 0;
+      margin-left: 1px;
+    }
+
+    /* ==========================================================================
+       2. 顶部天文台 Header 与开普勒三定律公式栏
+       ========================================================================== */
+    .topbar {
+      background: rgba(6, 10, 24, 0.94);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-dim);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .topbar-inner {
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 11px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 11px;
+      background: radial-gradient(circle at 35% 35%, rgba(251, 191, 36, 0.35), rgba(56, 189, 248, 0.16));
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fbbf24;
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.22);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.08rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .obs-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.14);
+      color: var(--c-cyan);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+
+    .brand-sub {
+      font-size: 0.79rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* 公式徽章条 */
+    .formula-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .f-pill {
+      background: rgba(12, 18, 34, 0.95);
+      border: 1px solid var(--border-dim);
+      border-radius: 9px;
+      padding: 5px 11px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .f-pill.gold-pill {
+      border-color: rgba(245, 158, 11, 0.4);
+      background: linear-gradient(145deg, rgba(16, 23, 42, 0.96), rgba(42, 28, 12, 0.85));
+    }
+
+    .fp-head {
+      font-size: 0.67rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .f-pill.gold-pill .fp-head {
+      color: var(--c-gold);
+    }
+
+    .fp-body {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #f8fafc;
+      margin-top: 1px;
+    }
+
+    /* ==========================================================================
+       3. 主实验工作台双栏布局
+       ========================================================================== */
+    .workspace {
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 16px 20px 28px;
+      display: grid;
+      grid-template-columns: 386px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 1120px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .workspace {
+        padding: 12px 12px 24px;
+      }
+      .topbar-inner {
+        padding: 10px 12px;
+      }
+    }
+
+    .card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-lg);
+      padding: 15px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .led-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--c-cyan);
+      box-shadow: 0 0 8px var(--c-cyan);
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       4. 左侧控制面板与天体力学遥测看板
+       ========================================================================== */
+    .left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .preset-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .preset-btn {
+      width: 100%;
+      background: var(--bg-sub);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      color: var(--text-secondary);
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .preset-btn:hover {
+      border-color: rgba(56, 189, 248, 0.45);
+      color: #f8fafc;
+      background: rgba(20, 31, 56, 0.94);
+    }
+
+    .preset-btn.active {
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.18), rgba(245, 158, 11, 0.08));
+      border-color: var(--c-cyan);
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 var(--c-cyan);
+    }
+
+    .preset-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .preset-desc {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    .preset-tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--c-cyan);
+      background: rgba(56, 189, 248, 0.12);
+      padding: 2px 7px;
+      border-radius: 5px;
+      flex-shrink: 0;
+    }
+
+    /* 目标天体下拉选择器 */
+    .select-box {
+      background: var(--bg-sub);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: var(--radius-md);
+      padding: 9px 11px;
+      margin-bottom: 10px;
+    }
+
+    .select-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+
+    .body-select {
+      width: 100%;
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: var(--radius-sm);
+      padding: 7px 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .body-select:focus {
+      border-color: var(--c-cyan);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+
+    /* 滑块控制组 */
+    .sliders-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-bottom: 12px;
+    }
+
+    .slider-card {
+      background: var(--bg-sub);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: var(--radius-md);
+      padding: 8px 11px;
+    }
+
+    .slider-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+      font-size: 0.79rem;
+    }
+
+    .slider-label {
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    .slider-badge {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--c-cyan);
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.26);
+      padding: 1px 7px;
+      border-radius: 5px;
+    }
+
+    .slider-badge.gold {
+      color: var(--c-gold);
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.28);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--c-cyan);
+      border: 2px solid #050814;
+      box-shadow: 0 0 9px rgba(56, 189, 248, 0.65);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.16);
+    }
+
+    input[type="range"].gold-range::-webkit-slider-thumb {
+      background: var(--c-gold);
+      box-shadow: 0 0 9px rgba(245, 158, 11, 0.65);
+    }
+
+    .slider-bounds {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.67rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* 播放 / 重置 / 复位视角按钮栏 */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1.15fr 0.95fr 1fr;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .ctrl-btn {
+      min-height: 36px;
+      padding: 0 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-dim);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text-primary);
+      font-size: 0.79rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .ctrl-btn:hover {
+      border-color: var(--c-cyan);
+      background: rgba(30, 41, 59, 0.96);
+    }
+
+    .ctrl-btn.primary {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      border-color: rgba(56, 189, 248, 0.55);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3);
+    }
+
+    .ctrl-btn.primary:hover {
+      filter: brightness(1.08);
+    }
+
+    /* 物理演示开关组 */
+    .toggles-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-dim);
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      cursor: pointer;
+      user-select: none;
+      padding: 2px 0;
+    }
+
+    .switch-pill {
+      position: relative;
+      width: 38px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .switch-pill input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .switch-track {
+      position: absolute;
+      inset: 0;
+      background: #1e293b;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 999px;
+      transition: 0.2s;
+    }
+
+    .switch-track::after {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 2px;
+      top: 2px;
+      border-radius: 50%;
+      background: #94a3b8;
+      transition: 0.2s;
+    }
+
+    .switch-pill input:checked + .switch-track {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: var(--c-cyan);
+    }
+
+    .switch-pill input:checked + .switch-track::after {
+      transform: translateX(18px);
+      background: var(--c-cyan);
+    }
+
+    /* 实时天体力学遥测看板 */
+    .tele-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .tele-item {
+      background: var(--bg-sub);
+      border: 1px solid rgba(148, 163, 184, 0.13);
+      border-radius: var(--radius-md);
+      padding: 9px 11px;
+    }
+
+    .tele-item.span-2 {
+      grid-column: span 2;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.11), rgba(245, 158, 11, 0.08));
+      border-color: rgba(56, 189, 248, 0.32);
+    }
+
+    .tele-k {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tele-v {
+      font-size: 1.0rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-top: 2px;
+    }
+
+    .tele-sub {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ==========================================================================
+       5. 右侧主星图视口与底部双联同步分析图表
+       ========================================================================== */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 11px;
+      font-size: 0.73rem;
+      color: var(--text-secondary);
+    }
+
+    .leg-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .leg-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .canvas-shell {
+      position: relative;
+      width: 100%;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: #050814;
+    }
+
+    #solarCanvas {
+      display: block;
+      width: 100%;
+      height: 450px;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #solarCanvas:active {
+      cursor: grabbing;
+    }
+
+    @media (max-width: 640px) {
+      #solarCanvas {
+        height: 360px;
+      }
+    }
+
+    /* 底部双联同步分析图表 */
+    .charts-duo {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 820px) {
+      .charts-duo {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-canvas {
+      display: block;
+      width: 100%;
+      height: 245px;
+    }
+
+    .chart-foot {
+      margin-top: 7px;
+      font-size: 0.71rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部天文台 Header 与开普勒定律公式栏 -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4" fill="#fbbf24" />
+            <ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(-22 12 12)" />
+            <circle cx="19.5" cy="9" r="1.6" fill="#38bdf8" stroke="#38bdf8" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            <span>太阳系天体力学与开普勒定律交互实验室</span>
+            <span class="obs-badge">牛顿-拉夫森迭代 10⁻¹² 精度 · 零数值漂移</span>
+          </div>
+          <div class="brand-sub">
+            开普勒方程 <i class="math-i">M</i> = <i class="math-i">E</i> &minus; <i class="math-i">e</i> sin <i class="math-i">E</i> 实时求解 · 完整八大行星 + 哈雷型高偏心率周期彗星 + 地月系统
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 个天体力学核心公式卡片 -->
+      <div class="formula-bar">
+        <div class="f-pill" title="轨道任意位置瞬时速度与日心距关系">
+          <div class="fp-head">活力公式 (Vis-viva)</div>
+          <div class="fp-body">
+            <i class="math-i">v</i><sup>2</sup> = <i class="math-i">GM</i><sub>&#9737;</sub>(<span class="frac"><span>2</span><span><i class="math-i">r</i></span></span> &minus; <span class="frac"><span>1</span><span><i class="math-i">a</i></span></span>)
+          </div>
+        </div>
+
+        <div class="f-pill gold-pill" title="等时间间隔扫过等面积，掠面速度守恒">
+          <div class="fp-head">开普勒第二定律（掠面速度守恒）</div>
+          <div class="fp-body">
+            <span class="frac"><span>d<i class="math-i">A</i></span><span>d<i class="math-i">t</i></span></span> = <span class="frac"><span><i class="math-i">L</i></span><span>2<i class="math-i">m</i></span></span> = <span class="frac"><span>1</span><span>2</span></span><span class="sqrt-box">&radic;<span class="sqrt-inner"><i class="math-i">GM</i><sub>&#9737;</sub><i class="math-i">a</i>(1 &minus; <i class="math-i">e</i><sup>2</sup>)</span></span> = 常量
+          </div>
+        </div>
+
+        <div class="f-pill" title="公转周期平方与轨道半长轴立方成正比">
+          <div class="fp-head">开普勒第三定律（调和定律）</div>
+          <div class="fp-body">
+            <span class="frac"><span><i class="math-i">T</i><sup>2</sup></span><span><i class="math-i">a</i><sup>3</sup></span></span> = <span class="frac"><span>4&pi;<sup>2</sup></span><span><i class="math-i">GM</i><sub>&#9737;</sub></span></span> = 1 yr<sup>2</sup>/AU<sup>3</sup>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主实验工作区 -->
+  <main class="workspace">
+    <!-- 左侧控制面板与天体力学遥测看板 -->
+    <aside class="left-col">
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="led-dot"></span>
+            <span>观测模式预设与天体控制</span>
+          </div>
+          <span class="mono" style="font-size:0.71rem;color:var(--c-gold);" id="simClockBadge">t = 0.000 yr</span>
+        </div>
+
+        <!-- 3 个观测模式预设 -->
+        <div class="preset-list" id="presetGroup">
+          <button type="button" class="preset-btn active" data-preset="panoramic">
+            <div>
+              <div class="preset-name">全景太阳系 (<span class="sqrt-box">&radic;<span class="sqrt-inner"><i class="math-i">r</i></span></span> 压缩比例)</div>
+              <div class="preset-desc">平方根径向映射，水星至海王星与彗星同屏完整展示</div>
+            </div>
+            <span class="preset-tag mono">&radic;r 全景</span>
+          </button>
+
+          <button type="button" class="preset-btn" data-preset="innerTrue">
+            <div>
+              <div class="preset-name">内太阳系真比例 (1:1 AU)</div>
+              <div class="preset-desc">严格天文单位线性比例，展示地月系统与椭圆双焦点</div>
+            </div>
+            <span class="preset-tag mono">1:1 AU</span>
+          </button>
+
+          <button type="button" class="preset-btn" data-preset="cometKepler2">
+            <div>
+              <div class="preset-name">彗星开普勒第二定律特写</div>
+              <div class="preset-desc">锁定高偏心率彗星 (e=0.84) 并开启等时间扇形扫掠</div>
+            </div>
+            <span class="preset-tag mono">等面积扇形</span>
+          </button>
+        </div>
+
+        <!-- 目标天体下拉选择器 -->
+        <div class="select-box">
+          <label class="select-label" for="bodySelect">
+            <span>当前追踪与分析目标天体</span>
+            <span class="mono" style="font-size:0.69rem;color:var(--c-cyan);">支持直接点击画布星球</span>
+          </label>
+          <select id="bodySelect" class="body-select">
+            <option value="mercury">水星 Mercury (a = 0.387 AU, e = 0.206)</option>
+            <option value="venus">金星 Venus (a = 0.723 AU, e = 0.007)</option>
+            <option value="earth" selected>地球 Earth + 月球 (a = 1.000 AU, e = 0.017)</option>
+            <option value="mars">火星 Mars (a = 1.524 AU, e = 0.093)</option>
+            <option value="jupiter">木星 Jupiter (a = 5.203 AU, e = 0.049)</option>
+            <option value="saturn">土星 Saturn + 光环 (a = 9.555 AU, e = 0.056)</option>
+            <option value="uranus">天王星 Uranus (a = 19.22 AU, e = 0.046)</option>
+            <option value="neptune">海王星 Neptune (a = 30.11 AU, e = 0.009)</option>
+            <option value="comet">哈雷型周期彗星 Comet (a = 5.80 AU, e = 0.840)</option>
+          </select>
+        </div>
+
+        <!-- 视角倾角、时间流速与轨道相位滑块 -->
+        <div class="sliders-stack">
+          <div class="slider-card">
+            <div class="slider-top">
+              <label class="slider-label" for="tiltSlider">2.5D 轨道倾角透视</label>
+              <span class="slider-badge mono" id="tiltVal">32° 斜视</span>
+            </div>
+            <input type="range" id="tiltSlider" min="0" max="70" step="1" value="32" />
+            <div class="slider-bounds mono"><span>0° 纯俯视</span><span>35° 立体视角</span><span>70° 侧斜视</span></div>
+          </div>
+
+          <div class="slider-card">
+            <div class="slider-top">
+              <label class="slider-label" for="speedSlider">仿真时间流速</label>
+              <span class="slider-badge mono" id="speedVal">0.40 yr/s</span>
+            </div>
+            <input type="range" id="speedSlider" min="0.05" max="5.0" step="0.05" value="0.40" />
+            <div class="slider-bounds mono"><span>0.05 yr/s</span><span>1.0 yr/s</span><span>5.0 yr/s</span></div>
+          </div>
+
+          <div class="slider-card">
+            <div class="slider-top">
+              <label class="slider-label" for="phaseSlider">目标轨道相位手动微调 (<i class="math-i">t</i> / <i class="math-i">T</i>)</label>
+              <span class="slider-badge gold mono" id="phaseVal">0.000 T (近日点 P)</span>
+            </div>
+            <input type="range" id="phaseSlider" class="gold-range" min="0" max="1000" step="1" value="0" />
+            <div class="slider-bounds mono"><span>0.0 T (近日点)</span><span>0.5 T (远日点)</span><span>1.0 T</span></div>
+          </div>
+        </div>
+
+        <!-- 播放 / 重置 / 视角归位按钮 -->
+        <div class="btn-row">
+          <button type="button" class="ctrl-btn primary" id="playPauseBtn">
+            <span id="playIcon">❚❚</span>
+            <span id="playText">暂停</span>
+          </button>
+          <button type="button" class="ctrl-btn" id="resetTimeBtn">
+            <span>↺</span>
+            <span>重置 t=0</span>
+          </button>
+          <button type="button" class="ctrl-btn" id="resetViewBtn">
+            <span>⌖</span>
+            <span>视角居中</span>
+          </button>
+        </div>
+
+        <!-- 3 个物理演示开关 -->
+        <div class="toggles-group">
+          <label class="toggle-row">
+            <span>开普勒第二定律等面积扇形扫掠 (&Delta;<i class="math-i">t</i> = <i class="math-i">T</i>/12)</span>
+            <span class="switch-pill">
+              <input type="checkbox" id="toggleKepler2" />
+              <span class="switch-track"></span>
+            </span>
+          </label>
+
+          <label class="toggle-row">
+            <span>显示切向速度 <i class="math-i">v</i> 与万有引力 <i class="math-i">F</i><sub>g</sub> 矢量箭头</span>
+            <span class="switch-pill">
+              <input type="checkbox" id="toggleVectors" checked />
+              <span class="switch-track"></span>
+            </span>
+          </label>
+
+          <label class="toggle-row">
+            <span>显示轨道几何特征（双焦点、近日点 P / 远日点 A）</span>
+            <span class="switch-pill">
+              <input type="checkbox" id="toggleGeometry" checked />
+              <span class="switch-track"></span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <!-- 实时天体力学遥测看板 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="led-dot" style="background:var(--c-gold);box-shadow:0 0 8px var(--c-gold);"></span>
+            <span id="teleHeaderTitle">地球 Earth · 实时天体力学遥测</span>
+          </div>
+          <span class="mono" style="font-size:0.7rem;color:var(--c-emerald);" id="teleIncBadge">i = 0.00°</span>
+        </div>
+
+        <div class="tele-grid">
+          <div class="tele-item">
+            <div class="tele-k"><span>日心距 <i class="math-i">r</i> = <i class="math-i">a</i>(1 &minus; <i class="math-i">e</i> cos <i class="math-i">E</i>)</span></div>
+            <div class="tele-v mono" style="color:var(--c-cyan);" id="statDistR">0.983 AU</div>
+            <div class="tele-sub mono" id="statPeriAp">rp=0.983, ra=1.017 AU</div>
+          </div>
+
+          <div class="tele-item">
+            <div class="tele-k"><span>瞬时公转速率 <i class="math-i">v</i></span></div>
+            <div class="tele-v mono" style="color:var(--c-emerald);" id="statVelV">30.29 km/s</div>
+            <div class="tele-sub mono" id="statVelRange">vp=30.29, va=29.29 km/s</div>
+          </div>
+
+          <div class="tele-item">
+            <div class="tele-k"><span>掠面速度 d<i class="math-i">A</i>/d<i class="math-i">t</i>（恒定）</span></div>
+            <div class="tele-v mono" style="color:var(--c-gold);" id="statAreaVel">3.141 AU²/yr</div>
+            <div class="tele-sub mono" id="statSectorArea">单扇区面积 ΔA: 0.262 AU²</div>
+          </div>
+
+          <div class="tele-item">
+            <div class="tele-k"><span>半长轴 <i class="math-i">a</i> 与偏心率 <i class="math-i">e</i></span></div>
+            <div class="tele-v mono" style="color:var(--c-magenta);" id="statSemiEcc">1.000 AU / 0.017</div>
+            <div class="tele-sub mono" id="statTrueAnom">真近点角 ν = 0.0°</div>
+          </div>
+
+          <div class="tele-item span-2">
+            <div class="tele-k">
+              <span>恒星公转周期 <i class="math-i">T</i> = <i class="math-i">a</i><sup>3/2</sup></span>
+              <span class="mono" style="color:var(--c-cyan);" id="statKeplerRatio">T² / a³ = 1.000000</span>
+            </div>
+            <div class="tele-v mono" id="statPeriodT">1.0000 地球年 (365.26 地球日)</div>
+            <div class="tele-sub mono" id="statSolverInfo">牛顿-拉夫森迭代收敛精度 |ΔE| &lt; 10⁻¹² rad</div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 右侧主星图与底部双联同步分析图表 -->
+    <section class="right-col">
+      <!-- 2.5D 深空太阳系主星图视口 -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="led-dot" style="background:var(--c-gold);box-shadow:0 0 8px var(--c-gold);"></span>
+            <span>2.5D 深空太阳系天体力学主星图</span>
+          </div>
+          <div class="legend-bar">
+            <span class="leg-item"><i class="leg-dot" style="background:#fbbf24;"></i>太阳焦点 <i class="math-i">F</i><sub>1</sub></span>
+            <span class="leg-item"><i class="leg-dot" style="background:#10b981;"></i>切向速度 <i class="math-i">v</i></span>
+            <span class="leg-item"><i class="leg-dot" style="background:#f43f5e;"></i>万有引力 <i class="math-i">F</i><sub>g</sub></span>
+            <span class="leg-item"><i class="leg-dot" style="background:#38bdf8;"></i>扫掠扇形 &Delta;<i class="math-i">A</i></span>
+            <span class="mono" style="color:#64748b;">[拖拽平移 · 滚轮缩放 · 点击选星]</span>
+          </div>
+        </div>
+
+        <div class="canvas-shell">
+          <canvas id="solarCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- 底部双联同步分析图表 -->
+      <div class="charts-duo">
+        <!-- 底部左图：开普勒第三定律对数验证图 log10(T) - log10(a) -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="led-dot" style="background:var(--c-cyan);"></span>
+              <span>开普勒第三定律对数验证图 log<sub>10</sub>(<i class="math-i">T</i>) &minus; log<sub>10</sub>(<i class="math-i">a</i>)</span>
+            </div>
+            <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">斜率 k = 3/2 = 1.50</span>
+          </div>
+          <div class="canvas-shell">
+            <canvas id="kepler3ChartCanvas" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-foot">
+            <span>八大行星与彗星严格落在理论直线 T² = a³ 上</span>
+            <span class="mono" style="color:var(--c-cyan);" id="k3ChartNote">当前: 地球 (a=1.00, T=1.00)</span>
+          </div>
+        </div>
+
+        <!-- 底部右图：选中天体瞬时速率 v(t) 与日心距 r(t) 周期演化曲线 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="led-dot" style="background:var(--c-emerald);box-shadow:0 0 8px var(--c-emerald);"></span>
+              <span>瞬时速率 <i class="math-i">v</i>(<i class="math-i">t</i>) 与日心距 <i class="math-i">r</i>(<i class="math-i">t</i>) 周期演化</span>
+            </div>
+            <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">绿线 v(km/s) · 琥珀线 r(AU)</span>
+          </div>
+          <div class="canvas-shell">
+            <canvas id="vrChartCanvas" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-foot">
+            <span>近日点 (0, T) 速率达峰值，远日点 (0.5T) 速率达谷值</span>
+            <span class="mono" style="color:var(--c-emerald);" id="vrChartNote">v = 30.29 km/s | r = 0.983 AU</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /**
+     * ============================================================================
+     * 太阳系天体力学与开普勒定律交互实验室
+     * 核心数学与数值物理引擎：
+     *   1. 开普勒方程求解器: M = E - e sin(E)，牛顿-拉夫森迭代精度 |ΔE| < 1e-12
+     *   2. 天文单位制: 长度 AU，时间 yr，GM_sun = 4π^2 AU^3/yr^2
+     *   3. 1 AU/yr = 4.74047046 km/s
+     * ============================================================================
+     */
+    (function () {
+      'use strict';
+
+      const TWO_PI = Math.PI * 2.0;
+      const DEG2RAD = Math.PI / 180.0;
+      const GM_SUN = 4.0 * Math.PI * Math.PI; // AU^3 / yr^2
+      const AU_PER_YR_TO_KMS = 4.74047046;   // 1 AU/yr -> km/s
+
+      // ==========================================================================
+      // 1. 太阳系八大行星与哈雷型周期彗星轨道根数数据库
+      // ==========================================================================
+      const CELESTIAL_BODIES = [
+        {
+          id: 'mercury', name: '水星', en: 'Mercury',
+          a: 0.387098, e: 0.205630, incDeg: 7.005, OmegaDeg: 48.33, omegaDeg: 29.12, M0Deg: 0,
+          color: '#a8a29e', radiusPx: 3.8, isComet: false
+        },
+        {
+          id: 'venus', name: '金星', en: 'Venus',
+          a: 0.723332, e: 0.006772, incDeg: 3.395, OmegaDeg: 76.68, omegaDeg: 54.88, M0Deg: 75,
+          color: '#fde047', radiusPx: 5.5, isComet: false
+        },
+        {
+          id: 'earth', name: '地球', en: 'Earth',
+          a: 1.000000, e: 0.016708, incDeg: 0.000, OmegaDeg: 0.00, omegaDeg: 102.94, M0Deg: 0,
+          color: '#38bdf8', radiusPx: 6.2, isComet: false, hasMoon: true
+        },
+        {
+          id: 'mars', name: '火星', en: 'Mars',
+          a: 1.523679, e: 0.093400, incDeg: 1.850, OmegaDeg: 49.56, omegaDeg: 286.50, M0Deg: 145,
+          color: '#f97316', radiusPx: 4.8, isComet: false
+        },
+        {
+          id: 'jupiter', name: '木星', en: 'Jupiter',
+          a: 5.20260, e: 0.048498, incDeg: 1.303, OmegaDeg: 100.46, omegaDeg: 273.87, M0Deg: 210,
+          color: '#f59e0b', radiusPx: 11.5, isComet: false, isJupiter: true
+        },
+        {
+          id: 'saturn', name: '土星', en: 'Saturn',
+          a: 9.55491, e: 0.055508, incDeg: 2.489, OmegaDeg: 113.66, omegaDeg: 339.39, M0Deg: 305,
+          color: '#eab308', radiusPx: 9.6, isComet: false, isSaturn: true
+        },
+        {
+          id: 'uranus', name: '天王星', en: 'Uranus',
+          a: 19.2184, e: 0.046381, incDeg: 0.773, OmegaDeg: 74.01, omegaDeg: 96.54, M0Deg: 40,
+          color: '#2dd4bf', radiusPx: 7.4, isComet: false
+        },
+        {
+          id: 'neptune', name: '海王星', en: 'Neptune',
+          a: 30.1104, e: 0.009456, incDeg: 1.770, OmegaDeg: 131.78, omegaDeg: 273.19, M0Deg: 260,
+          color: '#3b82f6', radiusPx: 7.2, isComet: false
+        },
+        {
+          id: 'comet', name: '哈雷型周期彗星', en: 'Comet',
+          a: 5.80000, e: 0.840000, incDeg: 16.00, OmegaDeg: 58.42, omegaDeg: 111.33, M0Deg: 0,
+          color: '#e879f9', radiusPx: 4.6, isComet: true
+        }
+      ];
+
+      // 预计算每个天体的恒星周期 T = a^(3/2)、平均角速度 n 与 3D 方向余弦矩阵
+      const BODY_MAP = {};
+      CELESTIAL_BODIES.forEach((b) => {
+        b.T = Math.pow(b.a, 1.5);                 // 地球年
+        b.n = TWO_PI / b.T;                       // rad / yr
+        b.M0 = b.M0Deg * DEG2RAD;
+        b.bSemi = b.a * Math.sqrt(1.0 - b.e * b.e);
+        b.rp = b.a * (1.0 - b.e);
+        b.ra = b.a * (1.0 + b.e);
+        b.vp = Math.sqrt(GM_SUN * (2.0 / b.rp - 1.0 / b.a)) * AU_PER_YR_TO_KMS;
+        b.va = Math.sqrt(GM_SUN * (2.0 / b.ra - 1.0 / b.a)) * AU_PER_YR_TO_KMS;
+        b.dAdt = 0.5 * Math.sqrt(GM_SUN * b.a * (1.0 - b.e * b.e)); // AU^2 / yr
+
+        // 3D 轨道倾角欧拉旋转基向量 P_vec (指向近日点) 与 Q_vec (轨道面内垂直方向)
+        const O = b.OmegaDeg * DEG2RAD;
+        const w = b.omegaDeg * DEG2RAD;
+        const inc = b.incDeg * DEG2RAD;
+        const cosO = Math.cos(O), sinO = Math.sin(O);
+        const cosW = Math.cos(w), sinW = Math.sin(w);
+        const cosI = Math.cos(inc), sinI = Math.sin(inc);
+
+        b.Px = cosO * cosW - sinO * sinW * cosI;
+        b.Py = sinO * cosW + cosO * sinW * cosI;
+        b.Pz = sinW * sinI;
+
+        b.Qx = -cosO * sinW - sinO * cosW * cosI;
+        b.Qy = -sinO * sinW + cosO * cosW * cosI;
+        b.Qz = cosW * sinI;
+
+        BODY_MAP[b.id] = b;
+      });
+
+      // ==========================================================================
+      // 2. 仿真交互状态
+      // ==========================================================================
+      const state = {
+        viewMode: 'panoramic',    // 'panoramic' (√r) | 'innerTrue' (1:1 AU) | 'cometKepler2'
+        selectedId: 'earth',      // 当前追踪目标天体 ID
+        t: 0.0,                   // 全局仿真时间 (地球年 yr)
+        speed: 0.40,              // 时间流速 (yr/s)
+        tiltDeg: 32,              // 2.5D 轨道倾角透视 (0° ~ 70°)
+        zoom: 1.0,                // 视图缩放倍率
+        panX: 0.0,                // 视图平移 X (px)
+        panY: 0.0,                // 视图平移 Y (px)
+        isPlaying: true,
+        showKepler2: false,       // 开普勒第二定律等面积扇形扫掠
+        showVectors: true,        // 切向速度 v 与万有引力 Fg 矢量
+        showGeometry: true,       // 轨道几何特征（双焦点、近日点 P / 远日点 A）
+        lastFrameTime: null
+      };
+
+      // 深空多层闪烁星场数据
+      const STARFIELD = Array.from({ length: 260 }, (_, idx) => {
+        const seed1 = Math.sin(idx * 12.9898) * 43758.5453;
+        const seed2 = Math.sin(idx * 78.233) * 19341.123;
+        const seed3 = Math.sin(idx * 45.164) * 91823.412;
+        const f1 = seed1 - Math.floor(seed1);
+        const f2 = seed2 - Math.floor(seed2);
+        const f3 = seed3 - Math.floor(seed3);
+        const colors = ['#ffffff', '#e0f2fe', '#fef3c7', '#bae6fd', '#f5d0fe'];
+        return {
+          nx: f1,
+          ny: f2,
+          radius: 0.55 + (f3 * 1.45),
+          alphaBase: 0.25 + f3 * 0.65,
+          twinkleSpeed: 1.2 + f1 * 3.2,
+          twinklePhase: f2 * TWO_PI,
+          color: colors[idx % colors.length]
+        };
+      });
+
+      // 每帧记录各天体的屏幕坐标以支持鼠标/触摸点选
+      let screenHitTargets = [];
+
+      // ==========================================================================
+      // 3. 牛顿-拉夫森迭代开普勒方程求解器 (精度 1e-12)
+      // ==========================================================================
+      function solveKeplerEquation(M_in, e) {
+        // 将平近点角规范化到 [0, 2π)
+        let M = M_in % TWO_PI;
+        if (M < 0) M += TWO_PI;
+
+        // 针对高偏心率优化初始猜测值，确保迅速二阶收敛
+        let E = (e > 0.8) ? Math.PI : (M + e * Math.sin(M));
+        const tol = 1e-12;
+        for (let iter = 0; iter < 50; iter++) {
+          const f = E - e * Math.sin(E) - M;
+          const fPrime = 1.0 - e * Math.cos(E);
+          const delta = f / fPrime;
+          E -= delta;
+          if (Math.abs(delta) < tol) {
+            break;
+          }
+        }
+        return E;
+      }
+
+      /**
+       * 计算指定天体在任意时间 t (yr) 的精确 3D 日心位置、速度与轨道参数
+       */
+      function computeBodyState(body, t) {
+        const M = body.M0 + body.n * t;
+        const E = solveKeplerEquation(M, body.e);
+        const cosE = Math.cos(E);
+        const sinE = Math.sin(E);
+        const sqrtOneMinusE2 = Math.sqrt(1.0 - body.e * body.e);
+
+        // 真近点角 ν ∈ [0, 2π)
+        let nu = 2.0 * Math.atan2(
+          Math.sqrt(1.0 + body.e) * Math.sin(E * 0.5),
+          Math.sqrt(1.0 - body.e) * Math.cos(E * 0.5)
+        );
+        if (nu < 0) nu += TWO_PI;
+
+        // 日心距 r = a(1 - e cos E)
+        const r = body.a * (1.0 - body.e * cosE);
+
+        // 轨道平面内坐标 (AU)
+        const xp = body.a * (cosE - body.e);
+        const yp = body.a * sqrtOneMinusE2 * sinE;
+
+        // 轨道平面内速度 (AU/yr)
+        const Edot = body.n / (1.0 - body.e * cosE);
+        const vxp = -body.a * sinE * Edot;
+        const vyp = body.a * sqrtOneMinusE2 * cosE * Edot;
+
+        // 旋转至 3D 黄道坐标系 (AU & AU/yr)
+        const X = body.Px * xp + body.Qx * yp;
+        const Y = body.Py * xp + body.Qy * yp;
+        const Z = body.Pz * xp + body.Qz * yp;
+
+        const VX = body.Px * vxp + body.Qx * vyp;
+        const VY = body.Py * vxp + body.Qy * vyp;
+        const VZ = body.Pz * vxp + body.Qz * vyp;
+
+        // 活力公式精确瞬时速率 (km/s)
+        const vAUyr = Math.sqrt(GM_SUN * (2.0 / r - 1.0 / body.a));
+        const vKms = vAUyr * AU_PER_YR_TO_KMS;
+
+        return {
+          body, t, M, E, nu, r, vKms,
+          X, Y, Z,
+          VX, VY, VZ
+        };
+      }
+
+      // ==========================================================================
+      // 4. DOM 元素引用绑定
+      // ==========================================================================
+      const solarCanvas = document.getElementById('solarCanvas');
+      const kepler3ChartCanvas = document.getElementById('kepler3ChartCanvas');
+      const vrChartCanvas = document.getElementById('vrChartCanvas');
+
+      const presetBtns = document.querySelectorAll('.preset-btn');
+      const bodySelect = document.getElementById('bodySelect');
+      const tiltSlider = document.getElementById('tiltSlider');
+      const speedSlider = document.getElementById('speedSlider');
+      const phaseSlider = document.getElementById('phaseSlider');
+
+      const tiltVal = document.getElementById('tiltVal');
+      const speedVal = document.getElementById('speedVal');
+      const phaseVal = document.getElementById('phaseVal');
+      const simClockBadge = document.getElementById('simClockBadge');
+
+      const playPauseBtn = document.getElementById('playPauseBtn');
+      const playIcon = document.getElementById('playIcon');
+      const playText = document.getElementById('playText');
+      const resetTimeBtn = document.getElementById('resetTimeBtn');
+      const resetViewBtn = document.getElementById('resetViewBtn');
+
+      const toggleKepler2 = document.getElementById('toggleKepler2');
+      const toggleVectors = document.getElementById('toggleVectors');
+      const toggleGeometry = document.getElementById('toggleGeometry');
+
+      // 遥测输出节点
+      const teleHeaderTitle = document.getElementById('teleHeaderTitle');
+      const teleIncBadge = document.getElementById('teleIncBadge');
+      const statDistR = document.getElementById('statDistR');
+      const statPeriAp = document.getElementById('statPeriAp');
+      const statVelV = document.getElementById('statVelV');
+      const statVelRange = document.getElementById('statVelRange');
+      const statAreaVel = document.getElementById('statAreaVel');
+      const statSectorArea = document.getElementById('statSectorArea');
+      const statSemiEcc = document.getElementById('statSemiEcc');
+      const statTrueAnom = document.getElementById('statTrueAnom');
+      const statKeplerRatio = document.getElementById('statKeplerRatio');
+      const statPeriodT = document.getElementById('statPeriodT');
+
+      const k3ChartNote = document.getElementById('k3ChartNote');
+      const vrChartNote = document.getElementById('vrChartNote');
+
+      // ==========================================================================
+      // 5. Canvas 高分屏适配与 2.5D 坐标投影工具
+      // ==========================================================================
+      function setupHiDPICanvas(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(10, rect.width);
+        const h = Math.max(10, rect.height);
+        const targetW = Math.round(w * dpr);
+        const targetH = Math.round(h * dpr);
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+        }
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, w, h };
+      }
+
+      function drawRoundRect(ctx, x, y, w, h, r) {
+        const rad = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rad, y);
+        ctx.lineTo(x + w - rad, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+        ctx.lineTo(x + w, y + h - rad);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+        ctx.lineTo(x + rad, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+        ctx.lineTo(x, y + rad);
+        ctx.quadraticCurveTo(x, y, x + rad, y);
+        ctx.closePath();
+      }
+
+      function drawArrow2D(ctx, x1, y1, x2, y2, color, lineWidth = 2.3) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.hypot(dx, dy);
+        if (len < 3) return;
+        const ang = Math.atan2(dy, dx);
+        const head = Math.min(10, Math.max(6, len * 0.25));
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2 - head * 0.65 * Math.cos(ang), y2 - head * 0.65 * Math.sin(ang));
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - head * Math.cos(ang - Math.PI / 6), y2 - head * Math.sin(ang - Math.PI / 6));
+        ctx.lineTo(x2 - head * Math.cos(ang + Math.PI / 6), y2 - head * Math.sin(ang + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      /**
+       * 将 3D 日心天文单位坐标 (X, Y, Z) 投影至主星图 2.5D 屏幕坐标
+       */
+      function project3DToScreen(X, Y, Z, viewCfg) {
+        const { cx, cy, baseScale, cosTilt, sinTilt, isSqrtMode } = viewCfg;
+        let mx = X;
+        let my = Y;
+        let mz = Z;
+
+        if (isSqrtMode) {
+          const R = Math.hypot(X, Y, Z);
+          if (R > 1e-12) {
+            const factor = Math.sqrt(R) / R;
+            mx = X * factor;
+            my = Y * factor;
+            mz = Z * factor;
+          }
+        }
+
+        // 2.5D 绕 X 轴俯仰投影（Y 向屏幕下方展开，Z 向屏幕上方抬升）
+        const sx = cx + mx * baseScale;
+        const sy = cy + (my * cosTilt - mz * sinTilt) * baseScale;
+        // 深度排序值（越大越靠近观察者）
+        const depth = my * sinTilt + mz * cosTilt;
+        return { sx, sy, depth };
+      }
+
+      // ==========================================================================
+      // 6. 主 2.5D 深空太阳系视口渲染 (solarCanvas)
+      // ==========================================================================
+      function renderSolarSystemViewport(wallSec) {
+        const { ctx, w, h } = setupHiDPICanvas(solarCanvas);
+        const selectedBody = BODY_MAP[state.selectedId] || BODY_MAP.earth;
+
+        // 1. 深空背景与多层闪烁星场
+        ctx.fillStyle = '#050814';
+        ctx.fillRect(0, 0, w, h);
+
+        const nebula = ctx.createRadialGradient(w * 0.5, h * 0.5, 10, w * 0.5, h * 0.5, Math.max(w, h) * 0.65);
+        nebula.addColorStop(0, 'rgba(30, 58, 138, 0.14)');
+        nebula.addColorStop(0.55, 'rgba(15, 23, 42, 0.08)');
+        nebula.addColorStop(1, 'rgba(5, 8, 20, 0)');
+        ctx.fillStyle = nebula;
+        ctx.fillRect(0, 0, w, h);
+
+        STARFIELD.forEach((st) => {
+          const twinkle = 0.72 + 0.28 * Math.sin(wallSec * st.twinkleSpeed + st.twinklePhase);
+          ctx.globalAlpha = st.alphaBase * twinkle;
+          ctx.fillStyle = st.color;
+          ctx.beginPath();
+          ctx.arc(st.nx * w, st.ny * h, st.radius, 0, TWO_PI);
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1.0;
+
+        // 2. 确定当前视口径向映射与基础比例尺
+        const isSqrtMode = (state.viewMode !== 'innerTrue');
+        const minHalfDim = Math.min(w, h) * 0.45;
+        let maxRadialUnit;
+        if (state.viewMode === 'innerTrue') {
+          // 1:1 AU 模式默认完整容纳火星轨道 (aphelion = 1.666 AU)
+          maxRadialUnit = 1.82;
+        } else if (state.viewMode === 'cometKepler2') {
+          // 彗星特写模式默认完整容纳哈雷型彗星椭圆 (aphelion = 10.672 AU -> sqrt(10.672) ≈ 3.267)
+          maxRadialUnit = Math.sqrt(11.4);
+        } else {
+          // 全景模式完整容纳海王星 (30.11 AU -> sqrt(30.11) ≈ 5.487)
+          maxRadialUnit = Math.sqrt(31.5);
+        }
+
+        const tiltRad = state.tiltDeg * DEG2RAD;
+        const viewCfg = {
+          cx: w * 0.5 + state.panX,
+          cy: h * 0.5 + state.panY,
+          baseScale: (minHalfDim / maxRadialUnit) * state.zoom,
+          cosTilt: Math.cos(tiltRad),
+          sinTilt: Math.sin(tiltRad),
+          isSqrtMode
+        };
+
+        // 3. 黄道参考平面网格同心圆（提示 AU 尺度）
+        renderEclipticReferenceRings(ctx, viewCfg);
+
+        // 4. 开普勒第二定律：等时间间隔 (Δt = T / 12) 扇形扫掠填充
+        if (state.showKepler2) {
+          renderKepler2Sectors(ctx, selectedBody, state.t, viewCfg);
+        }
+
+        // 5. 绘制所有天体的闭合椭圆轨道线
+        CELESTIAL_BODIES.forEach((b) => {
+          const isSel = (b.id === state.selectedId);
+          renderOrbitPath(ctx, b, isSel, viewCfg);
+        });
+
+        // 6. 选中天体的轨道几何特征（空焦点 F2、近日点 P、远日点 A、日心矢径 r）
+        const selectedState = computeBodyState(selectedBody, state.t);
+        if (state.showGeometry) {
+          renderOrbitGeometryFeatures(ctx, selectedBody, selectedState, viewCfg);
+        }
+
+        // 7. 太阳（位于焦点 F1 = (0,0,0)）与各天体按 2.5D 深度排序渲染
+        const renderQueue = [];
+        renderQueue.push({
+          type: 'sun',
+          depth: 0
+        });
+
+        CELESTIAL_BODIES.forEach((b) => {
+          const st = (b.id === state.selectedId) ? selectedState : computeBodyState(b, state.t);
+          const proj = project3DToScreen(st.X, st.Y, st.Z, viewCfg);
+          renderQueue.push({
+            type: 'body',
+            body: b,
+            st,
+            proj,
+            depth: proj.depth
+          });
+        });
+
+        renderQueue.sort((a, b) => a.depth - b.depth);
+
+        screenHitTargets = [];
+        renderQueue.forEach((item) => {
+          if (item.type === 'sun') {
+            renderSunAtOrigin(ctx, viewCfg, wallSec);
+          } else {
+            renderCelestialBody(ctx, item.body, item.st, item.proj, viewCfg, selectedState);
+          }
+        });
+
+        // 8. 切向速度矢量 v 与万有引力矢量 Fg（绘制在最上层保证清晰可见）
+        if (state.showVectors) {
+          renderVelocityAndGravityVectors(ctx, selectedBody, selectedState, viewCfg);
+        }
+
+        // 9. 左上角天文台实时状态悬浮卡片
+        renderObservatoryHUD(ctx, selectedBody, selectedState);
+      }
+
+      // 绘制黄道面淡青色同心距离标尺环
+      function renderEclipticReferenceRings(ctx, viewCfg) {
+        const ringsAU = (state.viewMode === 'innerTrue') ? [0.5, 1.0, 1.5] : [1.0, 5.0, 15.0, 30.0];
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.font = '500 9.5px ui-monospace, monospace';
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.textAlign = 'left';
+
+        const steps = 96;
+        ringsAU.forEach((rAU) => {
+          ctx.beginPath();
+          for (let i = 0; i <= steps; i++) {
+            const ang = (i / steps) * TWO_PI;
+            const p = project3DToScreen(rAU * Math.cos(ang), rAU * Math.sin(ang), 0, viewCfg);
+            if (i === 0) ctx.moveTo(p.sx, p.sy);
+            else ctx.lineTo(p.sx, p.sy);
+          }
+          ctx.stroke();
+
+          const labelPos = project3DToScreen(rAU, 0, 0, viewCfg);
+          ctx.fillText(`${rAU} AU`, labelPos.sx + 4, labelPos.sy - 2);
+        });
+        ctx.restore();
+      }
+
+      // 绘制太阳日冕辉光与色球层脉冲
+      function renderSunAtOrigin(ctx, viewCfg, wallSec) {
+        const sunProj = project3DToScreen(0, 0, 0, viewCfg);
+        const pulse = 1.0 + 0.06 * Math.sin(wallSec * 3.0);
+        const coreR = Math.max(9, Math.min(18, 11 * Math.pow(state.zoom, 0.35)));
+
+        ctx.save();
+        // 外层日冕
+        const corona = ctx.createRadialGradient(
+          sunProj.sx, sunProj.sy, coreR * 0.4,
+          sunProj.sx, sunProj.sy, coreR * 3.8 * pulse
+        );
+        corona.addColorStop(0, 'rgba(253, 224, 71, 0.72)');
+        corona.addColorStop(0.35, 'rgba(245, 158, 11, 0.28)');
+        corona.addColorStop(0.7, 'rgba(234, 88, 12, 0.08)');
+        corona.addColorStop(1, 'rgba(234, 88, 12, 0)');
+        ctx.fillStyle = corona;
+        ctx.beginPath();
+        ctx.arc(sunProj.sx, sunProj.sy, coreR * 3.8 * pulse, 0, TWO_PI);
+        ctx.fill();
+
+        // 光球层渐变球体
+        const photo = ctx.createRadialGradient(
+          sunProj.sx - coreR * 0.25, sunProj.sy - coreR * 0.25, coreR * 0.1,
+          sunProj.sx, sunProj.sy, coreR
+        );
+        photo.addColorStop(0, '#ffffff');
+        photo.addColorStop(0.45, '#fef08a');
+        photo.addColorStop(0.85, '#f59e0b');
+        photo.addColorStop(1, '#d97706');
+        ctx.fillStyle = photo;
+        ctx.beginPath();
+        ctx.arc(sunProj.sx, sunProj.sy, coreR, 0, TWO_PI);
+        ctx.fill();
+
+        if (state.showGeometry) {
+          ctx.fillStyle = '#fde68a';
+          ctx.font = '700 10px ui-monospace, monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('太阳 F₁', sunProj.sx, sunProj.sy + coreR + 13);
+        }
+        ctx.restore();
+      }
+
+      // 绘制闭合椭圆轨道线
+      function renderOrbitPath(ctx, body, isSelected, viewCfg) {
+        const steps = body.isComet ? 240 : 140;
+        ctx.save();
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const E = (i / steps) * TWO_PI;
+          const xp = body.a * (Math.cos(E) - body.e);
+          const yp = body.bSemi * Math.sin(E);
+          const X = body.Px * xp + body.Qx * yp;
+          const Y = body.Py * xp + body.Qy * yp;
+          const Z = body.Pz * xp + body.Qz * yp;
+          const p = project3DToScreen(X, Y, Z, viewCfg);
+          if (i === 0) ctx.moveTo(p.sx, p.sy);
+          else ctx.lineTo(p.sx, p.sy);
+        }
+
+        if (isSelected) {
+          ctx.strokeStyle = body.color;
+          ctx.lineWidth = 2.1;
+          ctx.globalAlpha = 0.88;
+        } else {
+          ctx.strokeStyle = body.isComet ? 'rgba(232, 121, 249, 0.34)' : 'rgba(148, 163, 184, 0.25)';
+          ctx.lineWidth = 1.1;
+          if (body.isComet) ctx.setLineDash([4, 4]);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 绘制开普勒第二定律等面积扇形扫掠 (Δt = T / 12)
+      function renderKepler2Sectors(ctx, body, t, viewCfg) {
+        const N = 12;
+        const dtSector = body.T / N;
+        const sunProj = project3DToScreen(0, 0, 0, viewCfg);
+
+        // 计算当前在单个周期内的相位时间 [0, T)
+        let tMod = (t + body.M0 / body.n) % body.T;
+        if (tMod < 0) tMod += body.T;
+        const activeIdx = Math.floor(tMod / dtSector) % N;
+
+        ctx.save();
+        for (let k = 0; k < N; k++) {
+          const tStart = k * dtSector;
+          const tEnd = (k === activeIdx) ? tMod : ((k + 1) * dtSector);
+          if (tEnd <= tStart + 1e-9) continue;
+
+          const subSteps = 18;
+          ctx.beginPath();
+          ctx.moveTo(sunProj.sx, sunProj.sy);
+          for (let s = 0; s <= subSteps; s++) {
+            const ts = tStart + (s / subSteps) * (tEnd - tStart);
+            const E = solveKeplerEquation(body.n * ts, body.e);
+            const xp = body.a * (Math.cos(E) - body.e);
+            const yp = body.bSemi * Math.sin(E);
+            const X = body.Px * xp + body.Qx * yp;
+            const Y = body.Py * xp + body.Qy * yp;
+            const Z = body.Pz * xp + body.Qz * yp;
+            const p = project3DToScreen(X, Y, Z, viewCfg);
+            ctx.lineTo(p.sx, p.sy);
+          }
+          ctx.closePath();
+
+          if (k === activeIdx) {
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.34)';
+            ctx.strokeStyle = 'rgba(251, 191, 36, 0.78)';
+            ctx.lineWidth = 1.3;
+          } else if (k % 2 === 0) {
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.13)';
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
+            ctx.lineWidth = 0.8;
+          } else {
+            ctx.fillStyle = 'rgba(232, 121, 249, 0.11)';
+            ctx.strokeStyle = 'rgba(232, 121, 249, 0.25)';
+            ctx.lineWidth = 0.8;
+          }
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // 绘制轨道几何特征：双焦点 F1/F2、近日点 P、远日点 A 与日心矢径
+      function renderOrbitGeometryFeatures(ctx, body, st, viewCfg) {
+        const sunProj = project3DToScreen(0, 0, 0, viewCfg);
+        const bodyProj = project3DToScreen(st.X, st.Y, st.Z, viewCfg);
+
+        // 近日点 P: (xp = rp, yp = 0); 远日点 A: (xp = -ra, yp = 0); 空焦点 F2: (xp = -2ae, yp = 0)
+        const to3D = (xp) => ({
+          X: body.Px * xp,
+          Y: body.Py * xp,
+          Z: body.Pz * xp
+        });
+
+        const p3 = to3D(body.rp);
+        const a3 = to3D(-body.ra);
+        const f23 = to3D(-2.0 * body.a * body.e);
+
+        const pProj = project3DToScreen(p3.X, p3.Y, p3.Z, viewCfg);
+        const aProj = project3DToScreen(a3.X, a3.Y, a3.Z, viewCfg);
+        const f2Proj = project3DToScreen(f23.X, f23.Y, f23.Z, viewCfg);
+
+        ctx.save();
+        // 拱线（近日点-远日点长轴虚线）
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(pProj.sx, pProj.sy);
+        ctx.lineTo(aProj.sx, aProj.sy);
+        ctx.stroke();
+
+        // 日心矢径 r 连线
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+        ctx.beginPath();
+        ctx.moveTo(sunProj.sx, sunProj.sy);
+        ctx.lineTo(bodyProj.sx, bodyProj.sy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 空焦点 F2 十字准星（偏心率明显时显示）
+        if (body.e > 0.03) {
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          ctx.moveTo(f2Proj.sx - 4, f2Proj.sy);
+          ctx.lineTo(f2Proj.sx + 4, f2Proj.sy);
+          ctx.moveTo(f2Proj.sx, f2Proj.sy - 4);
+          ctx.lineTo(f2Proj.sx, f2Proj.sy + 4);
+          ctx.stroke();
+
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '600 9.5px ui-monospace, monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('空焦点 F₂', f2Proj.sx, f2Proj.sy + 12);
+        }
+
+        // 近日点 P 与远日点 A 标记
+        ctx.fillStyle = '#34d399';
+        ctx.beginPath();
+        ctx.arc(pProj.sx, pProj.sy, 3.2, 0, TWO_PI);
+        ctx.fill();
+        ctx.font = '600 9.5px ui-monospace, monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`P 近日点 (${body.rp.toFixed(2)}AU)`, pProj.sx + 6, pProj.sy + 3);
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(aProj.sx, aProj.sy, 3.2, 0, TWO_PI);
+        ctx.fill();
+        ctx.textAlign = 'right';
+        ctx.fillText(`A 远日点 (${body.ra.toFixed(2)}AU)`, aProj.sx - 6, aProj.sy + 3);
+        ctx.restore();
+      }
+
+      // 绘制单个行星、土星光环、地月系统及哈雷型彗星
+      function renderCelestialBody(ctx, body, st, proj, viewCfg) {
+        const isSel = (body.id === state.selectedId);
+        const rPx = body.radiusPx * Math.pow(state.zoom, 0.25);
+
+        // 记录点击命中目标
+        screenHitTargets.push({
+          id: body.id,
+          sx: proj.sx,
+          sy: proj.sy,
+          hitR: Math.max(15, rPx + 8)
+        });
+
+        ctx.save();
+
+        // 1. 若为哈雷型周期彗星：绘制轨道运动拖尾 + 始终背向太阳的离子/尘埃彗尾
+        if (body.isComet) {
+          renderCometTailsAndTrail(ctx, body, st, proj, viewCfg);
+        }
+
+        // 2. 选中光环
+        if (isSel) {
+          ctx.strokeStyle = body.color;
+          ctx.lineWidth = 1.6;
+          ctx.setLineDash([3, 2]);
+          ctx.beginPath();
+          ctx.arc(proj.sx, proj.sy, rPx + 6.5, 0, TWO_PI);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // 3. 若为土星：绘制后半光环
+        if (body.isSaturn) {
+          renderSaturnRings(ctx, proj.sx, proj.sy, rPx, 'back');
+        }
+
+        // 4. 星球本体球面渐变
+        const sphereGrad = ctx.createRadialGradient(
+          proj.sx - rPx * 0.32, proj.sy - rPx * 0.32, rPx * 0.1,
+          proj.sx, proj.sy, rPx
+        );
+        sphereGrad.addColorStop(0, '#ffffff');
+        sphereGrad.addColorStop(0.35, body.color);
+        sphereGrad.addColorStop(1, '#0f172a');
+
+        ctx.fillStyle = sphereGrad;
+        ctx.beginPath();
+        ctx.arc(proj.sx, proj.sy, rPx, 0, TWO_PI);
+        ctx.fill();
+
+        // 5. 若为木星：绘制大气条纹云带
+        if (body.isJupiter) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(proj.sx, proj.sy, rPx, 0, TWO_PI);
+          ctx.clip();
+          ctx.fillStyle = 'rgba(120, 53, 15, 0.42)';
+          ctx.fillRect(proj.sx - rPx, proj.sy - rPx * 0.42, rPx * 2, rPx * 0.22);
+          ctx.fillRect(proj.sx - rPx, proj.sy + rPx * 0.16, rPx * 2, rPx * 0.24);
+          ctx.restore();
+        }
+
+        // 6. 若为土星：绘制前半光环
+        if (body.isSaturn) {
+          renderSaturnRings(ctx, proj.sx, proj.sy, rPx, 'front');
+        }
+
+        // 7. 若为地球：渲染月球绕地公转动画
+        if (body.hasMoon) {
+          renderEarthMoonSystem(ctx, st, proj, viewCfg, rPx);
+        }
+
+        // 8. 星球中文名称标签
+        if (state.showGeometry || isSel) {
+          ctx.fillStyle = isSel ? '#ffffff' : '#cbd5e1';
+          ctx.font = isSel ? '700 11px sans-serif' : '500 10px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(body.name, proj.sx, proj.sy - rPx - (isSel ? 10 : 6));
+        }
+
+        ctx.restore();
+      }
+
+      // 绘制土星半透明光环（分前后两半实现真实遮挡）
+      function renderSaturnRings(ctx, sx, sy, rPx, half) {
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(-0.35);
+        const startA = (half === 'back') ? Math.PI : 0;
+        const endA = (half === 'back') ? TWO_PI : Math.PI;
+
+        ctx.strokeStyle = 'rgba(253, 224, 71, 0.48)';
+        ctx.lineWidth = Math.max(2.5, rPx * 0.36);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rPx * 2.15, rPx * 0.72, 0, startA, endA);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(217, 119, 6, 0.35)';
+        ctx.lineWidth = Math.max(1.2, rPx * 0.16);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rPx * 1.65, rPx * 0.54, 0, startA, endA);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 绘制地球旁的月球绕地公转动画
+      function renderEarthMoonSystem(ctx, earthSt, earthProj, viewCfg, earthRpx) {
+        // 月球恒星周期约 27.32 天 = 0.0748 地球年
+        const moonOmega = TWO_PI / 0.0748;
+        const moonAngle = moonOmega * state.t;
+
+        if (state.viewMode === 'innerTrue') {
+          // 1:1 AU 模式下适度放大地月距离以便清晰观察月球轨道
+          const moonDistAU = 0.065;
+          const mx = earthSt.X + moonDistAU * Math.cos(moonAngle);
+          const my = earthSt.Y + moonDistAU * Math.sin(moonAngle);
+          const mz = earthSt.Z + 0.006 * Math.sin(moonAngle);
+          const mProj = project3DToScreen(mx, my, mz, viewCfg);
+
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.32)';
+          ctx.lineWidth = 0.9;
+          ctx.beginPath();
+          ctx.arc(earthProj.sx, earthProj.sy, Math.hypot(mProj.sx - earthProj.sx, mProj.sy - earthProj.sy), 0, TWO_PI);
+          ctx.stroke();
+
+          ctx.fillStyle = '#e2e8f0';
+          ctx.beginPath();
+          ctx.arc(mProj.sx, mProj.sy, 2.4, 0, TWO_PI);
+          ctx.fill();
+        } else {
+          // 全景模式下在地球周围渲染紧凑月球轨道与银白月球
+          const orbitR = earthRpx + 6.5;
+          const mx = earthProj.sx + orbitR * Math.cos(moonAngle);
+          const my = earthProj.sy + orbitR * Math.sin(moonAngle) * viewCfg.cosTilt;
+          ctx.fillStyle = '#e2e8f0';
+          ctx.beginPath();
+          ctx.arc(mx, my, 2.1, 0, TWO_PI);
+          ctx.fill();
+        }
+      }
+
+      // 绘制哈雷型周期彗星的轨道拖尾与始终背向太阳的离子彗尾
+      function renderCometTailsAndTrail(ctx, body, st, proj, viewCfg) {
+        const sunProj = project3DToScreen(0, 0, 0, viewCfg);
+
+        // 1. 沿轨道后方的动态尘埃尾迹弧线
+        ctx.save();
+        ctx.beginPath();
+        const trailSteps = 28;
+        const trailSpanT = body.T * 0.055;
+        for (let i = 0; i <= trailSteps; i++) {
+          const pastT = st.t - (i / trailSteps) * trailSpanT;
+          const pastSt = computeBodyState(body, pastT);
+          const pp = project3DToScreen(pastSt.X, pastSt.Y, pastSt.Z, viewCfg);
+          if (i === 0) ctx.moveTo(pp.sx, pp.sy);
+          else ctx.lineTo(pp.sx, pp.sy);
+        }
+        ctx.strokeStyle = 'rgba(232, 121, 249, 0.38)';
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        // 2. 太阳风吹拂形成的离子彗尾（严格沿太阳 -> 彗星的径向背阳方向！）
+        const dx = proj.sx - sunProj.sx;
+        const dy = proj.sy - sunProj.sy;
+        const distScreen = Math.hypot(dx, dy);
+        if (distScreen > 2) {
+          const ux = dx / distScreen;
+          const uy = dy / distScreen;
+          // 越靠近近日点（r 越小），太阳辐射越强，彗尾越长越亮
+          const proximity = Math.min(1.0, 2.2 / Math.max(0.8, st.r));
+          const tailLen = (26 + 58 * proximity) * Math.pow(state.zoom, 0.3);
+
+          const tailEndX = proj.sx + ux * tailLen;
+          const tailEndY = proj.sy + uy * tailLen;
+
+          const tailGrad = ctx.createLinearGradient(proj.sx, proj.sy, tailEndX, tailEndY);
+          tailGrad.addColorStop(0, 'rgba(103, 232, 249, 0.85)');
+          tailGrad.addColorStop(0.45, 'rgba(232, 121, 249, 0.36)');
+          tailGrad.addColorStop(1, 'rgba(103, 232, 249, 0)');
+
+          // 扇形离子尾锥
+          const perpX = -uy * (4.5 + 3.5 * proximity);
+          const perpY = ux * (4.5 + 3.5 * proximity);
+
+          ctx.fillStyle = tailGrad;
+          ctx.beginPath();
+          ctx.moveTo(proj.sx, proj.sy);
+          ctx.lineTo(tailEndX + perpX, tailEndY + perpY);
+          ctx.lineTo(tailEndX - perpX, tailEndY - perpY);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // 绘制选中天体的切向速度 v 与万有引力 Fg 矢量箭头
+      function renderVelocityAndGravityVectors(ctx, body, st, viewCfg) {
+        const sunProj = project3DToScreen(0, 0, 0, viewCfg);
+        const bodyProj = project3DToScreen(st.X, st.Y, st.Z, viewCfg);
+
+        // 1. 切向速度矢量方向：通过微元位移投影计算准确屏幕切向方向，并按当前速率相对平均速率缩放长度
+        const eps = body.T * 1e-4;
+        const nextSt = computeBodyState(body, st.t + eps);
+        const nextProj = project3DToScreen(nextSt.X, nextSt.Y, nextSt.Z, viewCfg);
+        const tdx = nextProj.sx - bodyProj.sx;
+        const tdy = nextProj.sy - bodyProj.sy;
+        const tLen = Math.hypot(tdx, tdy);
+
+        const vCirc = Math.sqrt(GM_SUN / body.a) * AU_PER_YR_TO_KMS;
+        const vScaleRatio = Math.max(0.45, Math.min(2.2, st.vKms / vCirc));
+        const vArrowPx = 38 * vScaleRatio;
+
+        if (tLen > 1e-6) {
+          const vxEnd = bodyProj.sx + (tdx / tLen) * vArrowPx;
+          const vyEnd = bodyProj.sy + (tdy / tLen) * vArrowPx;
+          drawArrow2D(ctx, bodyProj.sx, bodyProj.sy, vxEnd, vyEnd, '#10b981', 2.4);
+
+          ctx.fillStyle = '#34d399';
+          ctx.font = '700 10px ui-monospace, monospace';
+          ctx.textAlign = 'left';
+          ctx.fillText(`v=${st.vKms.toFixed(1)}km/s`, vxEnd + 4, vyEnd - 2);
+        }
+
+        // 2. 万有引力矢量 Fg（严格指向太阳焦点 F1，长度按 (a/r)^2 缩放并限制上限）
+        const gdx = sunProj.sx - bodyProj.sx;
+        const gdy = sunProj.sy - bodyProj.sy;
+        const gDist = Math.hypot(gdx, gdy);
+        if (gDist > 12) {
+          const fRatio = Math.max(0.4, Math.min(2.3, Math.pow(body.a / st.r, 1.4)));
+          const fArrowPx = Math.min(gDist - 10, 34 * fRatio);
+          const fxEnd = bodyProj.sx + (gdx / gDist) * fArrowPx;
+          const fyEnd = bodyProj.sy + (gdy / gDist) * fArrowPx;
+          drawArrow2D(ctx, bodyProj.sx, bodyProj.sy, fxEnd, fyEnd, '#f43f5e', 2.4);
+
+          ctx.fillStyle = '#fda4af';
+          ctx.font = '700 10px ui-monospace, monospace';
+          ctx.textAlign = 'left';
+          ctx.fillText('Fg', fxEnd + 4, fyEnd + 10);
+        }
+      }
+
+      // 绘制主星图左上角天文台实时 HUD 看板
+      function renderObservatoryHUD(ctx, body, st) {
+        const bx = 14;
+        const by = 14;
+        const bw = 258;
+        const bh = 78;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(8, 13, 26, 0.86)';
+        drawRoundRect(ctx, bx, by, bw, bh, 8);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.font = '600 10.5px ui-monospace, monospace';
+        ctx.textAlign = 'left';
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText(`追踪目标: ${body.name} (${body.en})  e=${body.e.toFixed(3)}`, bx + 11, by + 20);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText(`日心距 r = ${st.r.toFixed(3)} AU  |  ν = ${(st.nu / DEG2RAD).toFixed(1)}°`, bx + 11, by + 38);
+
+        ctx.fillStyle = '#10b981';
+        ctx.fillText(`瞬时速率 v = ${st.vKms.toFixed(2)} km/s`, bx + 11, by + 55);
+
+        ctx.fillStyle = '#e879f9';
+        ctx.fillText(`掠面速度 dA/dt = ${body.dAdt.toFixed(3)} AU²/yr (守恒)`, bx + 11, by + 71);
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 7. 底部双联同步分析图表渲染
+      // ==========================================================================
+
+      // 底部左图：开普勒第三定律对数验证图 log10(T) - log10(a)
+      function renderKepler3LogChart(selectedBody) {
+        const { ctx, w, h } = setupHiDPICanvas(kepler3ChartCanvas);
+        const pad = { top: 20, right: 22, bottom: 30, left: 46 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+
+        // log10(a) ∈ [-0.6, 1.65], log10(T) ∈ [-0.9, 2.5]
+        const minLogA = -0.60, maxLogA = 1.65;
+        const minLogT = -0.90, maxLogT = 2.50;
+
+        const toX = (la) => pad.left + ((la - minLogA) / (maxLogA - minLogA)) * plotW;
+        const toY = (lt) => pad.top + plotH - ((lt - minLogT) / (maxLogT - minLogT)) * plotH;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#050814';
+        ctx.fillRect(0, 0, w, h);
+
+        // 网格与坐标轴
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.font = '500 9.5px ui-monospace, monospace';
+        ctx.fillStyle = '#64748b';
+
+        [-0.5, 0.0, 0.5, 1.0, 1.5].forEach((la) => {
+          const px = toX(la);
+          ctx.beginPath();
+          ctx.moveTo(px, pad.top);
+          ctx.lineTo(px, pad.top + plotH);
+          ctx.stroke();
+          ctx.textAlign = 'center';
+          ctx.fillText(la.toFixed(1), px, pad.top + plotH + 14);
+        });
+
+        [-0.5, 0.0, 0.5, 1.0, 1.5, 2.0].forEach((lt) => {
+          const py = toY(lt);
+          ctx.beginPath();
+          ctx.moveTo(pad.left, py);
+          ctx.lineTo(pad.left + plotW, py);
+          ctx.stroke();
+          ctx.textAlign = 'right';
+          ctx.fillText(lt.toFixed(1), pad.left - 5, py + 3);
+        });
+
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.lineTo(pad.left + plotW, pad.top + plotH);
+        ctx.stroke();
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'right';
+        ctx.fillText('log₁₀(a / AU)', pad.left + plotW, pad.top + plotH + 25);
+        ctx.textAlign = 'left';
+        ctx.fillText('log₁₀(T / yr)', pad.left + 4, pad.top + 10);
+        ctx.restore();
+
+        // 理论直线 log10(T) = 1.5 * log10(a)
+        ctx.save();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+        ctx.setLineDash([5, 3]);
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(toX(minLogA), toY(1.5 * minLogA));
+        ctx.lineTo(toX(maxLogA), toY(1.5 * maxLogA));
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // 绘制所有天体数据点
+        CELESTIAL_BODIES.forEach((b) => {
+          const la = Math.log10(b.a);
+          const lt = Math.log10(b.T);
+          const px = toX(la);
+          const py = toY(lt);
+          const isSel = (b.id === selectedBody.id);
+
+          ctx.save();
+          if (isSel) {
+            // 高亮外圈与十字参考线
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(px, pad.top + plotH);
+            ctx.lineTo(px, py);
+            ctx.lineTo(pad.left, py);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.28)';
+            ctx.beginPath();
+            ctx.arc(px, py, 10, 0, TWO_PI);
+            ctx.fill();
+          }
+
+          ctx.fillStyle = isSel ? '#fbbf24' : b.color;
+          ctx.strokeStyle = isSel ? '#ffffff' : '#050814';
+          ctx.lineWidth = isSel ? 1.8 : 1.0;
+          ctx.beginPath();
+          ctx.arc(px, py, isSel ? 5.2 : 3.6, 0, TWO_PI);
+          ctx.fill();
+          ctx.stroke();
+
+          if (isSel || b.id === 'mercury' || b.id === 'neptune' || b.id === 'comet') {
+            ctx.fillStyle = isSel ? '#fde68a' : '#94a3b8';
+            ctx.font = isSel ? '700 10px sans-serif' : '500 9px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(b.name, px + 7, py + (b.id === 'comet' ? 11 : -4));
+          }
+          ctx.restore();
+        });
+      }
+
+      // 底部右图：选中天体瞬时速率 v(t) 与日心距 r(t) 周期演化曲线
+      function renderVRPeriodChart(body, currentSt) {
+        const { ctx, w, h } = setupHiDPICanvas(vrChartCanvas);
+        const pad = { top: 20, right: 44, bottom: 30, left: 46 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+
+        // 纵轴自适应范围（兼顾近圆轨道与高偏心率彗星）
+        const vSpan = Math.max(0.5, body.vp - body.va);
+        const vMin = Math.max(0, body.va - vSpan * 0.18);
+        const vMax = body.vp + vSpan * 0.18;
+
+        const rSpan = Math.max(0.01, body.ra - body.rp);
+        const rMin = Math.max(0, body.rp - rSpan * 0.18);
+        const rMax = body.ra + rSpan * 0.18;
+
+        const toX = (frac) => pad.left + frac * plotW;
+        const toYv = (v) => pad.top + plotH - ((v - vMin) / (vMax - vMin)) * plotH;
+        const toYr = (r) => pad.top + plotH - ((r - rMin) / (rMax - rMin)) * plotH;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#050814';
+        ctx.fillRect(0, 0, w, h);
+
+        // 网格与左右双刻度轴
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+        ctx.lineWidth = 1;
+        for (let i = 1; i <= 3; i++) {
+          const py = pad.top + (i / 4) * plotH;
+          ctx.beginPath();
+          ctx.moveTo(pad.left, py);
+          ctx.lineTo(pad.left + plotW, py);
+          ctx.stroke();
+        }
+
+        // 远日点 0.5T 中心参考虚线
+        const midX = toX(0.5);
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(midX, pad.top);
+        ctx.lineTo(midX, pad.top + plotH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 轴线
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.lineTo(pad.left + plotW, pad.top + plotH);
+        ctx.moveTo(pad.left + plotW, pad.top);
+        ctx.lineTo(pad.left + plotW, pad.top + plotH);
+        ctx.stroke();
+
+        // 左轴速度刻度（翡翠绿）
+        ctx.font = '600 9.5px ui-monospace, monospace';
+        ctx.fillStyle = '#34d399';
+        ctx.textAlign = 'right';
+        ctx.fillText(body.vp.toFixed(1), pad.left - 5, toYv(body.vp) + 3);
+        ctx.fillText(body.va.toFixed(1), pad.left - 5, toYv(body.va) + 3);
+
+        // 右轴日心距刻度（琥珀金）
+        ctx.fillStyle = '#fbbf24';
+        ctx.textAlign = 'left';
+        ctx.fillText(body.ra.toFixed(2), pad.left + plotW + 5, toYr(body.ra) + 3);
+        ctx.fillText(body.rp.toFixed(2), pad.left + plotW + 5, toYr(body.rp) + 3);
+
+        // 底部相位标签
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'center';
+        ctx.fillText('0 (近日点)', pad.left + 18, pad.top + plotH + 14);
+        ctx.fillText('0.5T (远日点)', midX, pad.top + plotH + 14);
+        ctx.fillText('1.0T', pad.left + plotW - 10, pad.top + plotH + 14);
+        ctx.restore();
+
+        // 1. 绘制日心距 r(t) 琥珀金曲线（从近日点相位 M=0 开始绘制完整 1 周期）
+        const steps = 140;
+        ctx.save();
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const frac = i / steps;
+          const E = solveKeplerEquation(frac * TWO_PI, body.e);
+          const r = body.a * (1.0 - body.e * Math.cos(E));
+          const px = toX(frac);
+          const py = toYr(r);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // 2. 绘制瞬时速率 v(t) 翡翠绿曲线
+        ctx.save();
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2.3;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const frac = i / steps;
+          const E = solveKeplerEquation(frac * TWO_PI, body.e);
+          const r = body.a * (1.0 - body.e * Math.cos(E));
+          const v = Math.sqrt(GM_SUN * (2.0 / r - 1.0 / body.a)) * AU_PER_YR_TO_KMS;
+          const px = toX(frac);
+          const py = toYv(v);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // 3. 当前相位垂直游标与双色追踪圆点
+        let curM = currentSt.M % TWO_PI;
+        if (curM < 0) curM += TWO_PI;
+        const curFrac = curM / TWO_PI;
+        const curX = toX(curFrac);
+
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(curX, pad.top);
+        ctx.lineTo(curX, pad.top + plotH);
+        ctx.stroke();
+
+        // 日心距圆点
+        ctx.fillStyle = '#f59e0b';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(curX, toYr(currentSt.r), 4.0, 0, TWO_PI);
+        ctx.fill();
+        ctx.stroke();
+
+        // 速率圆点
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.arc(curX, toYv(currentSt.vKms), 4.4, 0, TWO_PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 8. 遥测数据看板与 UI 控件状态同步
+      // ==========================================================================
+      function updateTelemetryUI(body, st) {
+        simClockBadge.textContent = `t = ${state.t.toFixed(3)} yr`;
+
+        let curM = st.M % TWO_PI;
+        if (curM < 0) curM += TWO_PI;
+        const phaseFrac = curM / TWO_PI;
+        phaseSlider.value = Math.round(phaseFrac * 1000);
+        const posHint = phaseFrac < 0.03 || phaseFrac > 0.97
+          ? ' (近日点 P)'
+          : (Math.abs(phaseFrac - 0.5) < 0.03 ? ' (远日点 A)' : '');
+        phaseVal.textContent = `${phaseFrac.toFixed(3)} T${posHint}`;
+
+        teleHeaderTitle.textContent = `${body.name} ${body.en} · 实时天体力学遥测`;
+        teleIncBadge.textContent = `轨道倾角 i = ${body.incDeg.toFixed(2)}°`;
+
+        statDistR.textContent = `${st.r.toFixed(3)} AU`;
+        statPeriAp.textContent = `rp=${body.rp.toFixed(3)}, ra=${body.ra.toFixed(3)} AU`;
+
+        statVelV.textContent = `${st.vKms.toFixed(2)} km/s`;
+        statVelRange.textContent = `vp=${body.vp.toFixed(2)}, va=${body.va.toFixed(2)} km/s`;
+
+        statAreaVel.textContent = `${body.dAdt.toFixed(3)} AU²/yr`;
+        statSectorArea.textContent = `单扇区面积 ΔA (T/12): ${(body.dAdt * body.T / 12.0).toFixed(3)} AU²`;
+
+        statSemiEcc.textContent = `${body.a.toFixed(3)} AU / ${body.e.toFixed(3)}`;
+        statTrueAnom.textContent = `真近点角 ν = ${(st.nu / DEG2RAD).toFixed(1)}°`;
+
+        const ratio = (body.T * body.T) / (body.a * body.a * body.a);
+        statKeplerRatio.textContent = `T² / a³ = ${ratio.toFixed(6)}`;
+        const days = body.T * 365.25636;
+        statPeriodT.textContent = `${body.T.toFixed(4)} 地球年 (${days >= 1000 ? days.toFixed(0) : days.toFixed(2)} 地球日)`;
+
+        k3ChartNote.textContent = `当前: ${body.name} (a=${body.a.toFixed(2)} AU, T=${body.T.toFixed(2)} yr)`;
+        vrChartNote.textContent = `v = ${st.vKms.toFixed(2)} km/s | r = ${st.r.toFixed(3)} AU`;
+      }
+
+      function renderAll(wallSec = performance.now() / 1000) {
+        const body = BODY_MAP[state.selectedId] || BODY_MAP.earth;
+        const st = computeBodyState(body, state.t);
+        updateTelemetryUI(body, st);
+        renderSolarSystemViewport(wallSec);
+        renderKepler3LogChart(body);
+        renderVRPeriodChart(body, st);
+      }
+
+      // ==========================================================================
+      // 9. 主动画循环与交互事件监听（包含鼠标拖拽、滚轮缩放与点击选星）
+      // ==========================================================================
+      function setPlayState(playing) {
+        state.isPlaying = playing;
+        playIcon.textContent = playing ? '❚❚' : '▶';
+        playText.textContent = playing ? '暂停' : '播放';
+      }
+
+      function animateLoop(timestamp) {
+        try {
+          if (state.lastFrameTime === null) {
+            state.lastFrameTime = timestamp;
+          }
+          const rawDt = (timestamp - state.lastFrameTime) / 1000;
+          state.lastFrameTime = timestamp;
+          const wallDt = Math.min(rawDt, 0.05);
+
+          if (state.isPlaying) {
+            state.t += wallDt * state.speed;
+          }
+
+          renderAll(timestamp / 1000);
+        } catch (err) {
+          console.error('太阳系模拟循环异常:', err);
+        }
+        requestAnimationFrame(animateLoop);
+      }
+
+      function selectCelestialBody(id) {
+        if (!BODY_MAP[id]) return;
+        state.selectedId = id;
+        bodySelect.value = id;
+        renderAll();
+      }
+
+      // 观测预设切换
+      presetBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const mode = btn.dataset.preset;
+          presetBtns.forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          state.viewMode = mode;
+          state.panX = 0;
+          state.panY = 0;
+          state.zoom = 1.0;
+
+          if (mode === 'panoramic') {
+            state.tiltDeg = 32;
+            tiltSlider.value = 32;
+            tiltVal.textContent = '32° 斜视';
+          } else if (mode === 'innerTrue') {
+            state.tiltDeg = 18;
+            tiltSlider.value = 18;
+            tiltVal.textContent = '18° 斜视';
+            if (['jupiter', 'saturn', 'uranus', 'neptune'].includes(state.selectedId)) {
+              selectCelestialBody('earth');
+            }
+          } else if (mode === 'cometKepler2') {
+            state.tiltDeg = 28;
+            tiltSlider.value = 28;
+            tiltVal.textContent = '28° 斜视';
+            state.showKepler2 = true;
+            toggleKepler2.checked = true;
+            selectCelestialBody('comet');
+          }
+          renderAll();
+        });
+      });
+
+      bodySelect.addEventListener('change', (e) => {
+        selectCelestialBody(e.target.value);
+      });
+
+      tiltSlider.addEventListener('input', (e) => {
+        state.tiltDeg = Number(e.target.value);
+        tiltVal.textContent = state.tiltDeg === 0 ? '0° 纯俯视' : `${state.tiltDeg}° 斜视`;
+        renderAll();
+      });
+
+      speedSlider.addEventListener('input', (e) => {
+        state.speed = parseFloat(e.target.value);
+        speedVal.textContent = `${state.speed.toFixed(2)} yr/s`;
+      });
+
+      // 手动拖动目标天体轨道相位 [0, 1.0 T]
+      phaseSlider.addEventListener('input', (e) => {
+        const body = BODY_MAP[state.selectedId] || BODY_MAP.earth;
+        const frac = Number(e.target.value) / 1000;
+        // 保持当前所在的整数周期圈数，仅调整圈内相位
+        const currentCycles = Math.floor((state.t + body.M0 / body.n) / body.T);
+        state.t = (currentCycles + frac) * body.T - body.M0 / body.n;
+        setPlayState(false);
+        renderAll();
+      });
+
+      playPauseBtn.addEventListener('click', () => {
+        setPlayState(!state.isPlaying);
+      });
+
+      resetTimeBtn.addEventListener('click', () => {
+        state.t = 0.0;
+        setPlayState(true);
+        renderAll();
+      });
+
+      resetViewBtn.addEventListener('click', () => {
+        state.panX = 0;
+        state.panY = 0;
+        state.zoom = 1.0;
+        renderAll();
+      });
+
+      toggleKepler2.addEventListener('change', (e) => {
+        state.showKepler2 = e.target.checked;
+        renderAll();
+      });
+
+      toggleVectors.addEventListener('change', (e) => {
+        state.showVectors = e.target.checked;
+        renderAll();
+      });
+
+      toggleGeometry.addEventListener('change', (e) => {
+        state.showGeometry = e.target.checked;
+        renderAll();
+      });
+
+      // ==========================================================================
+      // 10. 主星图鼠标/触摸拖拽平移、滚轮缩放与点击选择行星交互
+      // ==========================================================================
+      let isDragging = false;
+      let dragMoved = false;
+      let dragStartX = 0;
+      let dragStartY = 0;
+      let panStartX = 0;
+      let panStartY = 0;
+
+      solarCanvas.addEventListener('pointerdown', (e) => {
+        isDragging = true;
+        dragMoved = false;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        panStartX = state.panX;
+        panStartY = state.panY;
+        solarCanvas.setPointerCapture(e.pointerId);
+      });
+
+      solarCanvas.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - dragStartX;
+        const dy = e.clientY - dragStartY;
+        if (Math.hypot(dx, dy) > 4) {
+          dragMoved = true;
+        }
+        state.panX = panStartX + dx;
+        state.panY = panStartY + dy;
+        renderAll();
+      });
+
+      solarCanvas.addEventListener('pointerup', (e) => {
+        if (isDragging && !dragMoved) {
+          // 判定为点击事件：检测是否点中某颗行星或彗星
+          const rect = solarCanvas.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const clickY = e.clientY - rect.top;
+
+          let closestId = null;
+          let minDist = Infinity;
+          for (const target of screenHitTargets) {
+            const d = Math.hypot(clickX - target.sx, clickY - target.sy);
+            if (d <= target.hitR && d < minDist) {
+              minDist = d;
+              closestId = target.id;
+            }
+          }
+          if (closestId) {
+            selectCelestialBody(closestId);
+          }
+        }
+        isDragging = false;
+        solarCanvas.releasePointerCapture(e.pointerId);
+      });
+
+      solarCanvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
+        state.zoom = Math.max(0.45, Math.min(4.5, state.zoom * zoomFactor));
+        renderAll();
+      }, { passive: false });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && document.activeElement.tagName !== 'BUTTON' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
+          e.preventDefault();
+          playPauseBtn.click();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        renderAll();
+      });
+
+      window.onload = function () {
+        renderAll();
+        requestAnimationFrame(animateLoop);
+      };
+    })();
+  </script>
+</body>
+</html>

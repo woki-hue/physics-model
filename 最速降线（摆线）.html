@@ -1,0 +1,2664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>最速降线（摆线）竞速与等时性验证实验室</title>
+  <style>
+    /* ==========================================================================
+       1. 深空科研仪表盘视觉设计令牌 (#070b14 -> #0f172a -> #1e293b)
+       ========================================================================== */
+    :root {
+      --bg-void: #070b14;
+      --bg-deep: #0b1120;
+      --bg-panel: rgba(15, 23, 42, 0.92);
+      --bg-sub: rgba(9, 14, 28, 0.85);
+      --border-dim: rgba(148, 163, 184, 0.16);
+      --border-glow: rgba(56, 189, 248, 0.42);
+
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --c-cycloid: #38bdf8;   /* 摆线 (最速降线): 霓虹青 */
+      --c-line: #fb7185;      /* 直线轨道: 珊瑚红 */
+      --c-circle: #fbbf24;    /* 圆弧轨道: 琥珀金 */
+      --c-parabola: #a78bfa;  /* 抛物线轨道: 紫罗兰 */
+      --c-emerald: #10b981;   /* 矢量/成功状态: 翡翠绿 */
+
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 7px;
+      --shadow-card: 0 14px 36px -10px rgba(2, 6, 23, 0.9);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background-color: var(--bg-void);
+      background-image:
+        radial-gradient(circle at 12% 0%, rgba(56, 189, 248, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 88% 8%, rgba(251, 191, 36, 0.08) 0%, transparent 42%),
+        linear-gradient(180deg, #070b14 0%, #0d1527 55%, #162038 100%);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .math-i {
+      font-family: "Times New Roman", Georgia, serif;
+      font-style: italic;
+    }
+
+    /* 数学分式与根式排版 */
+    .frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      margin: 0 2px;
+      font-size: 0.86em;
+      line-height: 1.05;
+    }
+    .frac > span:first-child {
+      border-bottom: 1px solid currentColor;
+      padding: 0 3px 1px;
+    }
+    .frac > span:last-child {
+      padding: 1px 3px 0;
+    }
+
+    .sqrt-box {
+      display: inline-flex;
+      align-items: center;
+      vertical-align: middle;
+    }
+    .sqrt-inner {
+      border-top: 1px solid currentColor;
+      padding: 1px 3px 0;
+      margin-left: 1px;
+    }
+
+    /* ==========================================================================
+       2. 顶部 Header 与变分法核心摘要栏
+       ========================================================================== */
+    .topbar {
+      background: rgba(7, 11, 20, 0.94);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-dim);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .topbar-inner {
+      max-width: 1620px;
+      margin: 0 auto;
+      padding: 10px 18px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(251, 191, 36, 0.18));
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--c-cycloid);
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.2);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .lab-badge {
+      font-size: 0.71rem;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.14);
+      color: var(--c-cycloid);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+
+    .brand-sub {
+      font-size: 0.77rem;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    .header-formulas {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .hf-pill {
+      background: rgba(13, 21, 39, 0.96);
+      border: 1px solid var(--border-dim);
+      border-radius: 9px;
+      padding: 4px 11px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .hf-pill.highlight {
+      border-color: rgba(56, 189, 248, 0.42);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(14, 42, 66, 0.85));
+    }
+
+    .hf-label {
+      font-size: 0.66rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .hf-pill.highlight .hf-label {
+      color: var(--c-cycloid);
+    }
+
+    .hf-math {
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+
+    /* ==========================================================================
+       3. 三栏响应式科研仪表盘主网格
+       ========================================================================== */
+    .dashboard-grid {
+      max-width: 1620px;
+      margin: 0 auto;
+      padding: 14px 18px 26px;
+      display: grid;
+      grid-template-columns: 375px minmax(460px, 1.35fr) 365px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    @media (max-width: 1340px) {
+      .dashboard-grid {
+        grid-template-columns: 365px 1fr;
+      }
+      .right-telemetry-col {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      .right-telemetry-col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .dashboard-grid {
+        padding: 10px 10px 22px;
+      }
+      .topbar-inner {
+        padding: 9px 12px;
+      }
+    }
+
+    .col-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .led-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--c-cycloid);
+      box-shadow: 0 0 8px var(--c-cycloid);
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       4. 左侧控制面板与摆线解析公式专享模块
+       ========================================================================== */
+    .mode-switcher {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: var(--bg-sub);
+      padding: 4px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-dim);
+      margin-bottom: 11px;
+    }
+
+    .mode-btn {
+      padding: 8px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.77rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      text-align: center;
+    }
+
+    .mode-btn:hover {
+      color: #f8fafc;
+      background: rgba(30, 41, 59, 0.65);
+    }
+
+    .mode-btn.active {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(56, 189, 248, 0.14));
+      border-color: rgba(56, 189, 248, 0.55);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(14, 165, 233, 0.22);
+    }
+
+    .preset-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 11px;
+    }
+
+    .preset-btn {
+      width: 100%;
+      background: var(--bg-sub);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-md);
+      padding: 7px 10px;
+      color: var(--text-secondary);
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .preset-btn:hover {
+      border-color: rgba(56, 189, 248, 0.45);
+      color: #f8fafc;
+      background: rgba(22, 33, 56, 0.95);
+    }
+
+    .preset-btn.active {
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.18), rgba(251, 191, 36, 0.08));
+      border-color: var(--c-cycloid);
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 var(--c-cycloid);
+    }
+
+    .preset-name {
+      font-size: 0.79rem;
+      font-weight: 700;
+    }
+
+    .preset-desc {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+    }
+
+    .preset-tag {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--c-cycloid);
+      background: rgba(56, 189, 248, 0.12);
+      padding: 2px 6px;
+      border-radius: 5px;
+      flex-shrink: 0;
+    }
+
+    /* 参数滑块 */
+    .sliders-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 11px;
+    }
+
+    .slider-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    @media (max-width: 420px) {
+      .slider-pair {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .slider-card {
+      background: var(--bg-sub);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: var(--radius-md);
+      padding: 7px 10px;
+    }
+
+    .slider-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      font-size: 0.76rem;
+      gap: 4px;
+    }
+
+    .slider-label {
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    .slider-badge {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--c-cycloid);
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 1px 6px;
+      border-radius: 5px;
+      white-space: nowrap;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 5px;
+      background: #1e293b;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--c-cycloid);
+      border: 2px solid #070b14;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.65);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.16);
+    }
+
+    /* 控制按钮栏 */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr 0.9fr;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .ctrl-btn {
+      min-height: 35px;
+      padding: 0 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-dim);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text-primary);
+      font-size: 0.77rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .ctrl-btn:hover {
+      border-color: var(--c-cycloid);
+      background: rgba(30, 41, 59, 0.96);
+    }
+
+    .ctrl-btn.primary {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      border-color: rgba(56, 189, 248, 0.55);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.28);
+    }
+
+    .ctrl-btn.primary:hover {
+      filter: brightness(1.08);
+    }
+
+    /* 可视化开关 */
+    .toggles-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding-top: 9px;
+      border-top: 1px solid var(--border-dim);
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.76rem;
+      color: #cbd5e1;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .switch-pill {
+      position: relative;
+      width: 36px;
+      height: 19px;
+      flex-shrink: 0;
+    }
+
+    .switch-pill input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .switch-track {
+      position: absolute;
+      inset: 0;
+      background: #1e293b;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 999px;
+      transition: 0.2s;
+    }
+
+    .switch-track::after {
+      content: "";
+      position: absolute;
+      width: 13px;
+      height: 13px;
+      left: 2px;
+      top: 2px;
+      border-radius: 50%;
+      background: #94a3b8;
+      transition: 0.2s;
+    }
+
+    .switch-pill input:checked + .switch-track {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: var(--c-cycloid);
+    }
+
+    .switch-pill input:checked + .switch-track::after {
+      transform: translateX(17px);
+      background: var(--c-cycloid);
+    }
+
+    /* 专属：摆线解析式与动力学方程模块 */
+    .formula-box {
+      background: linear-gradient(160deg, rgba(9, 14, 28, 0.94), rgba(14, 28, 48, 0.88));
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: var(--radius-md);
+      padding: 10px 11px;
+      margin-bottom: 10px;
+    }
+
+    .fb-section {
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed rgba(148, 163, 184, 0.18);
+    }
+
+    .fb-section:last-child {
+      padding-bottom: 0;
+      margin-bottom: 0;
+      border-bottom: none;
+    }
+
+    .fb-tag {
+      font-size: 0.69rem;
+      font-weight: 700;
+      color: var(--c-cycloid);
+      margin-bottom: 3px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .fb-eq {
+      font-size: 0.83rem;
+      color: #f8fafc;
+      font-weight: 600;
+      line-height: 1.55;
+    }
+
+    .fb-note {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* 实时解析求解数值表 */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 7px;
+    }
+
+    .metric-cell {
+      background: var(--bg-sub);
+      border: 1px solid rgba(148, 163, 184, 0.13);
+      border-radius: var(--radius-sm);
+      padding: 7px 9px;
+    }
+
+    .metric-k {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+    }
+
+    .metric-v {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-top: 1px;
+    }
+
+    .metric-sub {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* ==========================================================================
+       5. 中央主物理视口与右侧实时遥测图表
+       ========================================================================== */
+    .legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+
+    .leg-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .leg-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .canvas-shell {
+      position: relative;
+      width: 100%;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: #060a14;
+    }
+
+    #mainViewportCanvas {
+      display: block;
+      width: 100%;
+      height: 560px;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #mainViewportCanvas:active {
+      cursor: grabbing;
+    }
+
+    @media (max-width: 900px) {
+      #mainViewportCanvas {
+        height: 430px;
+      }
+    }
+
+    .chart-canvas {
+      display: block;
+      width: 100%;
+      height: 248px;
+    }
+
+    .chart-foot {
+      margin-top: 7px;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 排名排行榜条 */
+    .ranking-strip {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+    }
+
+    @media (max-width: 640px) {
+      .ranking-strip {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .rank-card {
+      background: var(--bg-sub);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: var(--radius-sm);
+      padding: 6px 9px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .rank-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.71rem;
+      font-weight: 700;
+    }
+
+    .rank-time {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部标题栏与变分法摘要 -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="4" cy="5" r="2" fill="#38bdf8" />
+            <circle cx="20" cy="17" r="2" fill="#fbbf24" />
+            <path d="M4 5 C 6 19, 14 21, 20 17" stroke="#38bdf8" stroke-width="2.3" />
+            <line x1="4" y1="5" x2="20" y2="17" stroke="#fb7185" stroke-dasharray="3 2" stroke-width="1.4" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            <span>最速降线（摆线）竞速与等时性验证实验室</span>
+            <span class="lab-badge">约翰·伯努利变分法神题 · 欧拉-拉格朗日方程精确求解</span>
+          </div>
+          <div class="brand-sub">
+            光滑重力场质点无摩擦滑落 · 对比摆线、直线、圆弧、抛物线四轨竞速与摆线等时性（五球同落）
+          </div>
+        </div>
+      </div>
+
+      <div class="header-formulas">
+        <div class="hf-pill highlight">
+          <div class="hf-label">变分泛函最小化（光学类比折射定律）</div>
+          <div class="hf-math">
+            <i class="math-i">T</i> = &int; <span class="frac"><span>d<i class="math-i">s</i></span><span><span class="sqrt-box">&radic;<span class="sqrt-inner">2<i class="math-i">gy</i></span></span></span></span> = min &nbsp;&rArr;&nbsp; <span class="frac"><span>sin <i class="math-i">&phi;</i></span><span><span class="sqrt-box">&radic;<span class="sqrt-inner"><i class="math-i">y</i></span></span></span></span> = const
+          </div>
+        </div>
+        <div class="hf-pill">
+          <div class="hf-label">生成圆半径 <i class="math-i">R</i> 与参数角 <i class="math-i">&theta;</i> 关系</div>
+          <div class="hf-math">
+            <i class="math-i">x</i>(<i class="math-i">&theta;</i>) = <i class="math-i">R</i>(<i class="math-i">&theta;</i> &minus; sin <i class="math-i">&theta;</i>), &nbsp; <i class="math-i">y</i>(<i class="math-i">&theta;</i>) = <i class="math-i">R</i>(1 &minus; cos <i class="math-i">&theta;</i>)
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 三栏主实验工作区 -->
+  <main class="dashboard-grid">
+    <!-- 左栏：模式控制 + 摆线解析公式专享面板 -->
+    <aside class="col-stack">
+      <!-- 控制与参数卡片 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="led-dot"></span>
+            <span>实验模式与轨道参数设置</span>
+          </div>
+          <span class="mono" style="font-size:0.71rem;color:var(--c-cycloid);" id="clockBadge">t = 0.000 s</span>
+        </div>
+
+        <!-- 双模式切换器 -->
+        <div class="mode-switcher" role="tablist">
+          <button type="button" class="mode-btn active" id="modeRaceBtn" data-mode="race">最速降线四轨竞速</button>
+          <button type="button" class="mode-btn" id="modeTautoBtn" data-mode="tautochrone">摆线等时性验证（五球）</button>
+        </div>
+
+        <!-- 4 个一键典型物理工况预设 -->
+        <div class="preset-stack" id="presetGroup">
+          <button type="button" class="preset-btn active" data-preset="classic">
+            <div>
+              <div class="preset-name">经典最速降线竞速</div>
+              <div class="preset-desc mono">X_B = 4.00 m, Y_B = 2.00 m, g = 9.81 m/s²</div>
+            </div>
+            <span class="preset-tag mono">&theta;_B &approx; 138°</span>
+          </button>
+
+          <button type="button" class="preset-btn" data-preset="abyssDip">
+            <div>
+              <div class="preset-name">长距离平缓滑道（先潜入深渊再反超）</div>
+              <div class="preset-desc mono">X_B = 5.60 m, Y_B = 1.40 m, &theta;_B &gt; 180° 先下探再爬坡</div>
+            </div>
+            <span class="preset-tag mono">先深潜反超</span>
+          </button>
+
+          <button type="button" class="preset-btn" data-preset="steepWell">
+            <div>
+              <div class="preset-name">陡峭深井下落</div>
+              <div class="preset-desc mono">X_B = 1.80 m, Y_B = 3.20 m, 陡峭竖直加速</div>
+            </div>
+            <span class="preset-tag mono">&theta;_B &approx; 76°</span>
+          </button>
+
+          <button type="button" class="preset-btn" data-preset="tautochrone5">
+            <div>
+              <div class="preset-name">摆线等时性五球同落</div>
+              <div class="preset-desc mono">5 个不同高度同时释放 &rarr; 严格同时抵达谷底</div>
+            </div>
+            <span class="preset-tag mono">T = &pi;&radic;(R/g)</span>
+          </button>
+        </div>
+
+        <!-- 终点坐标、重力与仿真倍速滑块 -->
+        <div class="sliders-stack">
+          <div class="slider-pair">
+            <div class="slider-card" id="xbSliderCard">
+              <div class="slider-top">
+                <label class="slider-label" for="xbSlider">终点水平 <i class="math-i">X</i><sub>B</sub></label>
+                <span class="slider-badge mono" id="xbVal">4.00 m</span>
+              </div>
+              <input type="range" id="xbSlider" min="1.0" max="6.5" step="0.05" value="4.00" />
+            </div>
+
+            <div class="slider-card">
+              <div class="slider-top">
+                <label class="slider-label" for="ybSlider" id="ybSliderLabel">终点下落 <i class="math-i">Y</i><sub>B</sub></label>
+                <span class="slider-badge mono" id="ybVal">2.00 m</span>
+              </div>
+              <input type="range" id="ybSlider" min="0.8" max="4.0" step="0.05" value="2.00" />
+            </div>
+          </div>
+
+          <div class="slider-pair">
+            <div class="slider-card">
+              <div class="slider-top">
+                <label class="slider-label" for="gSlider">重力加速度 <i class="math-i">g</i></label>
+                <span class="slider-badge mono" id="gVal">9.81 m/s²</span>
+              </div>
+              <input type="range" id="gSlider" min="1.62" max="24.79" step="0.01" value="9.81" />
+            </div>
+
+            <div class="slider-card">
+              <div class="slider-top">
+                <label class="slider-label" for="speedSlider">仿真倍速</label>
+                <span class="slider-badge mono" id="speedVal">1.00x</span>
+              </div>
+              <input type="range" id="speedSlider" min="0.20" max="2.00" step="0.05" value="1.00" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 播放控制按钮 -->
+        <div class="btn-row">
+          <button type="button" class="ctrl-btn primary" id="playPauseBtn">
+            <span id="playIcon">❚❚</span>
+            <span id="playText">暂停</span>
+          </button>
+          <button type="button" class="ctrl-btn" id="stepBtn">
+            <span>⏭</span>
+            <span>单步 +0.02s</span>
+          </button>
+          <button type="button" class="ctrl-btn" id="resetBtn">
+            <span>↺</span>
+            <span>重置</span>
+          </button>
+        </div>
+
+        <!-- 可视化图层开关 -->
+        <div class="toggles-group">
+          <label class="toggle-row">
+            <span>显示摆线生成滚轮（沿 <i class="math-i">y</i>=0 无滑滚动圆）</span>
+            <span class="switch-pill">
+              <input type="checkbox" id="toggleWheel" checked />
+              <span class="switch-track"></span>
+            </span>
+          </label>
+
+          <label class="toggle-row">
+            <span>显示瞬时速度 <i class="math-i">v</i> 与切向加速度 <i class="math-i">a</i><sub>t</sub> 矢量</span>
+            <span class="switch-pill">
+              <input type="checkbox" id="toggleVectors" checked />
+              <span class="switch-track"></span>
+            </span>
+          </label>
+
+          <label class="toggle-row">
+            <span>显示小球运动发光尾迹</span>
+            <span class="switch-pill">
+              <input type="checkbox" id="toggleTrails" checked />
+              <span class="switch-track"></span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <!-- 专属模块：摆线解析式与动力学方程 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="led-dot" style="background:var(--c-circle);box-shadow:0 0 8px var(--c-circle);"></span>
+            <span>摆线解析式与动力学方程</span>
+          </div>
+          <span class="mono" style="font-size:0.69rem;color:var(--c-emerald);">精确解析解</span>
+        </div>
+
+        <div class="formula-box">
+          <div class="fb-section">
+            <div class="fb-tag">
+              <span>1. 摆线参数解析式（<i class="math-i">y</i> 轴竖直向下为正）</span>
+              <span class="mono" id="eqRadiusTag">R = 1.146 m</span>
+            </div>
+            <div class="fb-eq mono">
+              x(&theta;) = R(&theta; &minus; sin &theta;)<br />
+              y(&theta;) = R(1 &minus; cos &theta;)
+            </div>
+            <div class="fb-note">半径为 <i class="math-i">R</i> 的圆沿水平线 <i class="math-i">y</i> = 0 无滑滚动时，圆周定点描出的轨迹</div>
+          </div>
+
+          <div class="fb-section">
+            <div class="fb-tag">
+              <span>2. 竞速解析演化律（从原点 <i class="math-i">A</i> 静止释放）</span>
+              <span class="mono" id="eqThetaBTag">&theta;_B = 2.412 rad</span>
+            </div>
+            <div class="fb-eq">
+              <i class="math-i">&theta;</i>(<i class="math-i">t</i>) = <span class="sqrt-box">&radic;<span class="sqrt-inner"><span class="frac"><span><i class="math-i">g</i></span><span><i class="math-i">R</i></span></span></span></span> &middot; <i class="math-i">t</i>, &nbsp;&nbsp;
+              <i class="math-i">T</i><sub>摆线</sub> = <i class="math-i">&theta;</i><sub>B</sub><span class="sqrt-box">&radic;<span class="sqrt-inner"><span class="frac"><span><i class="math-i">R</i></span><span><i class="math-i">g</i></span></span></span></span>
+            </div>
+            <div class="fb-note">参数角 <i class="math-i">&theta;</i> 随时间匀速增长，切向加速度 <i class="math-i">a</i><sub>t</sub> = <i class="math-i">g</i> cos(<i class="math-i">&theta;</i>/2)</div>
+          </div>
+
+          <div class="fb-section">
+            <div class="fb-tag">
+              <span>3. 摆线等时性精确解析解（严格简谐演化）</span>
+              <span class="mono" id="eqTautoTag">T_fall = 1.074 s</span>
+            </div>
+            <div class="fb-eq">
+              cos<span class="frac"><span><i class="math-i">&theta;</i>(<i class="math-i">t</i>)</span><span>2</span></span> = cos<span class="frac"><span><i class="math-i">&theta;</i><sub>0</sub></span><span>2</span></span> &middot; cos(<span class="frac"><span>1</span><span>2</span></span><span class="sqrt-box">&radic;<span class="sqrt-inner"><span class="frac"><span><i class="math-i">g</i></span><span><i class="math-i">R</i></span></span></span></span><i class="math-i">t</i>), &nbsp;
+              <i class="math-i">T</i><sub>落底</sub> = &pi;<span class="sqrt-box">&radic;<span class="sqrt-inner"><span class="frac"><span><i class="math-i">R</i></span><span><i class="math-i">g</i></span></span></span></span>
+            </div>
+            <div class="fb-note">抵达谷底 (<i class="math-i">&theta;</i> = &pi;) 的时间与初始释放角 <i class="math-i">&theta;</i><sub>0</sub> 完全无关！</div>
+          </div>
+        </div>
+
+        <!-- 实时求解参数网格 -->
+        <div class="metrics-grid">
+          <div class="metric-cell">
+            <div class="metric-k">生成圆半径 <i class="math-i">R</i></div>
+            <div class="metric-v mono" style="color:var(--c-cycloid);" id="valRadius">1.146 m</div>
+            <div class="metric-sub mono" id="valMaxDepth">谷底深度 2R = 2.292 m</div>
+          </div>
+
+          <div class="metric-cell">
+            <div class="metric-k">终点参数角 <i class="math-i">&theta;</i><sub>B</sub></div>
+            <div class="metric-v mono" style="color:var(--c-circle);" id="valThetaB">138.2° (2.41 rad)</div>
+            <div class="metric-sub mono" id="valDipStatus">单调下降（未超半周）</div>
+          </div>
+
+          <div class="metric-cell">
+            <div class="metric-k" id="metric3Title">摆线夺冠用时 <i class="math-i">T</i><sub>摆线</sub></div>
+            <div class="metric-v mono" style="color:var(--c-emerald);" id="valTBest">0.824 s</div>
+            <div class="metric-sub mono" id="valTimeSave">比直线快 0.186 s (-18.4%)</div>
+          </div>
+
+          <div class="metric-cell">
+            <div class="metric-k" id="metric4Title">直线用时 <i class="math-i">T</i><sub>直线</sub></div>
+            <div class="metric-v mono" style="color:var(--c-line);" id="valTLine">1.010 s</div>
+            <div class="metric-sub mono" id="valVEnd">终点速率 v_B = 6.26 m/s</div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 中栏：主物理交互画布视口 -->
+    <section class="col-stack">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="led-dot" style="background:var(--c-emerald);box-shadow:0 0 8px var(--c-emerald);"></span>
+            <span id="viewportTitle">重力场四轨光滑滑落实时竞速视口</span>
+          </div>
+          <div class="legend-bar" id="viewportLegend">
+            <span class="leg-item"><i class="leg-dot" style="background:#38bdf8;"></i>摆线（最速降线）</span>
+            <span class="leg-item"><i class="leg-dot" style="background:#fbbf24;"></i>圆弧</span>
+            <span class="leg-item"><i class="leg-dot" style="background:#a78bfa;"></i>抛物线</span>
+            <span class="leg-item"><i class="leg-dot" style="background:#fb7185;"></i>直线</span>
+          </div>
+        </div>
+
+        <div class="canvas-shell">
+          <canvas id="mainViewportCanvas"></canvas>
+        </div>
+
+        <!-- 底部四轨到站成绩单（竞速模式下显示） / 五球碰撞说明（等时性模式下显示） -->
+        <div class="ranking-strip" id="rankingStrip"></div>
+      </div>
+    </section>
+
+    <!-- 右栏：双联同步实时遥测图表 -->
+    <aside class="col-stack right-telemetry-col">
+      <!-- 图表 1：瞬时速率演化曲线 v(t) -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="led-dot"></span>
+            <span>瞬时速率演化曲线 <i class="math-i">v</i>(<i class="math-i">t</i>)</span>
+          </div>
+          <span class="mono" style="font-size:0.69rem;color:var(--text-secondary);">v = &radic;(2gy)</span>
+        </div>
+        <div class="canvas-shell">
+          <canvas id="velChartCanvas" class="chart-canvas"></canvas>
+        </div>
+        <div class="chart-foot">
+          <span id="velChartDesc">摆线起步沿陡坡急剧加速，早期速率远超直线</span>
+          <span class="mono" style="color:var(--c-cycloid);" id="velChartNote">v_max = 6.26 m/s</span>
+        </div>
+      </div>
+
+      <!-- 图表 2：水平推进 x(t) / 竖直下落高度 y(t) -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="led-dot" style="background:var(--c-circle);box-shadow:0 0 8px var(--c-circle);"></span>
+            <span id="posChartTitle">水平推进位移 <i class="math-i">x</i>(<i class="math-i">t</i>) 反超曲线</span>
+          </div>
+          <span class="mono" style="font-size:0.69rem;color:var(--text-secondary);" id="posChartBadge">x(t) &rarr; X_B</span>
+        </div>
+        <div class="canvas-shell">
+          <canvas id="posChartCanvas" class="chart-canvas"></canvas>
+        </div>
+        <div class="chart-foot">
+          <span id="posChartDesc">观测青色摆线曲线如何利用高速度在后半程反超所有轨道</span>
+          <span class="mono" style="color:var(--c-circle);" id="posChartNote">X_B = 4.00 m</span>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    /**
+     * ============================================================================
+     * 最速降线（摆线）竞速与等时性验证实验室
+     * 核心数学与物理计算引擎：
+     *   1. 摆线方程求解器：牛顿-拉夫森 + 二分保护法求解 X_B/Y_B = (θ_B - sin θ_B)/(1 - cos θ_B)，精度 1e-13
+     *   2. 摆线精确解析演化：θ(t) = √(g/R) · t，T_cycloid = θ_B √(R/g)
+     *   3. 直线精确匀加速解：T_line = √(2(X_B² + Y_B²) / (g Y_B))
+     *   4. 圆弧与抛物线轨道：超高精度弧长表 + 固定微步长 RK4 (dt = 0.0005s) + 起始级数展开
+     *   5. 摆线等时性精确解：cos(θ(t)/2) = cos(θ₀/2) · cos(½√(g/R) · t)
+     * ============================================================================
+     */
+    (function () {
+      'use strict';
+
+      const TWO_PI = Math.PI * 2.0;
+      const DEG2RAD = Math.PI / 180.0;
+      const RAD2DEG = 180.0 / Math.PI;
+      const RK4_DT = 0.0005; // 0.5 ms 固定微步长，确保弧长积分零能量漂移
+
+      // ==========================================================================
+      // 1. 实验状态与预设工况
+      // ==========================================================================
+      const state = {
+        mode: 'race',         // 'race' | 'tautochrone'
+        XB: 4.00,             // 终点水平距离 (m)
+        YB: 2.00,             // 终点下落高度 / 等时性谷深 2R (m)
+        g: 9.81,              // 重力加速度 (m/s^2)
+        speed: 1.00,          // 仿真倍速 (0.2x ~ 2.0x)
+
+        showWheel: true,      // 显示摆线生成滚轮
+        showVectors: true,    // 显示速度/切向加速度矢量
+        showTrails: true,     // 显示运动发光尾迹
+
+        isPlaying: true,
+        t: 0.0,
+        lastFrameTime: null
+      };
+
+      const PRESETS = {
+        classic:      { mode: 'race',        XB: 4.00, YB: 2.00, g: 9.81 },
+        abyssDip:     { mode: 'race',        XB: 5.60, YB: 1.40, g: 9.81 },
+        steepWell:    { mode: 'race',        XB: 1.80, YB: 3.20, g: 9.81 },
+        tautochrone5: { mode: 'tautochrone', XB: 4.00, YB: 2.20, g: 9.81 }
+      };
+
+      // 五球同落配置（释放角 θ0 与高对比度霓虹配色）
+      const TAUTO_BEADS = [
+        { id: 'b1', name: '1号球 (θ₀=25°)',  theta0Deg: 25,  color: '#38bdf8' },
+        { id: 'b2', name: '2号球 (θ₀=55°)',  theta0Deg: 55,  color: '#10b981' },
+        { id: 'b3', name: '3号球 (θ₀=85°)',  theta0Deg: 85,  color: '#fbbf24' },
+        { id: 'b4', name: '4号球 (θ₀=115°)', theta0Deg: 115, color: '#a78bfa' },
+        { id: 'b5', name: '5号球 (θ₀=145°)', theta0Deg: 145, color: '#fb7185' }
+      ];
+
+      // 预计算缓存的当前物理模型数据
+      let raceModel = null;
+      let tautoModel = null;
+
+      // 主视口拖拽终点 B 交互状态
+      let isDraggingTarget = false;
+      let lastViewportTransform = { ox: 60, oy: 75, scale: 110, bxPx: 0, byPx: 0 };
+
+      // ==========================================================================
+      // 2. 高精度摆线超越方程求解器与四轨运动学预计算
+      // ==========================================================================
+
+      /**
+       * 求解 f(θ) = (θ - sin θ) * YB - (1 - cos θ) * XB = 0, θ ∈ (0, 2π)
+       * 采用区间保护的牛顿-拉夫森迭代（收敛容差 1e-13）
+       */
+      function solveCycloidParameter(XB, YB) {
+        let low = 1e-7;
+        let high = TWO_PI - 1e-7;
+        // 初始猜测：利用小角近似 θ ≈ 3 * YB / XB 估计，并限制在有效区间内
+        let theta = Math.max(0.15, Math.min(TWO_PI - 0.15, 2.5 * Math.atan2(YB, XB * 0.5)));
+
+        for (let iter = 0; iter < 80; iter++) {
+          const sinT = Math.sin(theta);
+          const cosT = Math.cos(theta);
+          const f = (theta - sinT) * YB - (1.0 - cosT) * XB;
+
+          if (Math.abs(f) < 1e-13) break;
+
+          if (f < 0) low = theta;
+          else high = theta;
+
+          const df = (1.0 - cosT) * YB - sinT * XB;
+          let nextTheta = theta - (Math.abs(df) > 1e-12 ? f / df : 0);
+
+          // 若牛顿步越界，则退回二分步保证绝对收敛
+          if (nextTheta <= low || nextTheta >= high || !Number.isFinite(nextTheta)) {
+            nextTheta = 0.5 * (low + high);
+          }
+          theta = nextTheta;
+        }
+
+        const R = YB / (1.0 - Math.cos(theta));
+        return { thetaB: theta, R };
+      }
+
+      /**
+       * 基于精确弧长表与固定微步长 RK4 积分任意光滑几何轨道 y(s)
+       * pts: [{ x, y }, ...] 从 (0, 0) 到 (XB, YB)，要求 y > 0 (除起点外)
+       */
+      function integrateArcLengthTrack(pts, g) {
+        const n = pts.length;
+        const sArr = new Float64Array(n);
+        sArr[0] = 0.0;
+        for (let i = 1; i < n; i++) {
+          const ds = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+          sArr[i] = sArr[i - 1] + ds;
+        }
+        const totalS = sArr[n - 1];
+
+        // 起始倾斜角 α0（消除 t=0 处 v=√(2gy)=0 的奇异性）
+        const alpha0 = Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
+        const a0 = g * Math.sin(alpha0);
+
+        // 根据弧长 s 二分查找几何高度 y(s) 与切向倾角 α(s)
+        function sampleAtS(s) {
+          if (s <= 0) {
+            return { x: pts[0].x, y: pts[0].y, sinA: Math.sin(alpha0), cosA: Math.cos(alpha0) };
+          }
+          if (s >= totalS) {
+            const pLast = pts[n - 1];
+            const pPrev = pts[n - 2];
+            const angEnd = Math.atan2(pLast.y - pPrev.y, pLast.x - pPrev.x);
+            return { x: pLast.x, y: pLast.y, sinA: Math.sin(angEnd), cosA: Math.cos(angEnd) };
+          }
+          let lo = 0, hi = n - 1;
+          while (hi - lo > 1) {
+            const mid = (lo + hi) >> 1;
+            if (sArr[mid] <= s) lo = mid;
+            else hi = mid;
+          }
+          const segLen = Math.max(1e-12, sArr[hi] - sArr[lo]);
+          const frac = (s - sArr[lo]) / segLen;
+          const x = pts[lo].x + frac * (pts[hi].x - pts[lo].x);
+          const y = pts[lo].y + frac * (pts[hi].y - pts[lo].y);
+          const ang = Math.atan2(pts[hi].y - pts[lo].y, pts[hi].x - pts[lo].x);
+          return { x, y, sinA: Math.sin(ang), cosA: Math.cos(ang) };
+        }
+
+        // 记录每隔 5ms 的精确运动轨迹历史，用于 O(1) 实时查表与图表绘制
+        const history = [];
+        let t = 0.0;
+        let s = 0.0;
+        let v = 0.0;
+
+        // 起步第一微步采用解析匀加速启动：s = 0.5 * a0 * dt^2, v = a0 * dt
+        const startupSteps = 4;
+        for (let k = 0; k < startupSteps; k++) {
+          t += RK4_DT;
+          s = 0.5 * a0 * t * t;
+          v = a0 * t;
+        }
+
+        history.push({ t: 0, x: 0, y: 0, v: 0, at: a0, sinA: Math.sin(alpha0), cosA: Math.cos(alpha0) });
+
+        let stepCounter = startupSteps;
+        const speedFn = (sVal) => {
+          const geo = sampleAtS(sVal);
+          return Math.sqrt(Math.max(0, 2.0 * g * geo.y));
+        };
+
+        while (s < totalS && t < 30.0) {
+          const k1 = speedFn(s);
+          const k2 = speedFn(s + 0.5 * RK4_DT * k1);
+          const k3 = speedFn(s + 0.5 * RK4_DT * k2);
+          const k4 = speedFn(s + RK4_DT * k3);
+          const dsStep = (RK4_DT / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+
+          if (s + dsStep >= totalS) {
+            const remFrac = (totalS - s) / Math.max(1e-12, dsStep);
+            t += RK4_DT * remFrac;
+            s = totalS;
+            break;
+          }
+
+          s += dsStep;
+          t += RK4_DT;
+          stepCounter++;
+
+          if (stepCounter % 10 === 0) {
+            const geo = sampleAtS(s);
+            v = Math.sqrt(Math.max(0, 2.0 * g * geo.y));
+            history.push({
+              t,
+              x: geo.x,
+              y: geo.y,
+              v,
+              at: g * geo.sinA,
+              sinA: geo.sinA,
+              cosA: geo.cosA
+            });
+          }
+        }
+
+        const endGeo = sampleAtS(totalS);
+        const endV = Math.sqrt(Math.max(0, 2.0 * g * endGeo.y));
+        history.push({
+          t,
+          x: endGeo.x,
+          y: endGeo.y,
+          v: endV,
+          at: g * endGeo.sinA,
+          sinA: endGeo.sinA,
+          cosA: endGeo.cosA
+        });
+
+        return { totalTime: t, history };
+      }
+
+      /**
+       * 重建当前参数下的竞速模式与等时性模式完整物理模型
+       */
+      function rebuildPhysicsModels() {
+        const { XB, YB, g } = state;
+
+        // ---------------- 1. 竞速模式四轨建模 ----------------
+        const { thetaB, R } = solveCycloidParameter(XB, YB);
+        const omegaCyc = Math.sqrt(g / R);
+        const T_cycloid = thetaB / omegaCyc;
+
+        // 摆线采样点
+        const cycPts = [];
+        const numSamples = 240;
+        for (let i = 0; i <= numSamples; i++) {
+          const th = (i / numSamples) * thetaB;
+          cycPts.push({
+            x: R * (th - Math.sin(th)),
+            y: R * (1.0 - Math.cos(th))
+          });
+        }
+
+        // 直线解析模型
+        const chordLen = Math.hypot(XB, YB);
+        const sinAlpha = YB / chordLen;
+        const cosAlpha = XB / chordLen;
+        const aLine = g * sinAlpha;
+        const T_line = Math.sqrt((2.0 * chordLen) / aLine);
+        const linePts = [
+          { x: 0, y: 0 },
+          { x: XB, y: YB }
+        ];
+
+        // 圆弧模型：在弦坐标系中构建严格位于直线下方、且起点切向不向上凸起的圆弧
+        const chordAngle = Math.atan2(YB, XB);
+        const maxBeta = Math.max(0.12, (Math.PI * 0.5 - chordAngle) * 0.86);
+        const beta = Math.min(0.46, maxBeta);
+        const sagitta = 0.5 * chordLen * Math.tan(beta * 0.5);
+        const arcRadius = (chordLen * chordLen) / (8.0 * sagitta) + 0.5 * sagitta;
+
+        const circlePts = [];
+        for (let i = 0; i <= numSamples; i++) {
+          const u = (i / numSamples) * chordLen;
+          const du = u - 0.5 * chordLen;
+          const w = Math.sqrt(Math.max(0, arcRadius * arcRadius - du * du)) - (arcRadius - sagitta);
+          circlePts.push({
+            x: u * cosAlpha - w * sinAlpha,
+            y: u * sinAlpha + w * cosAlpha
+          });
+        }
+        const circleSim = integrateArcLengthTrack(circlePts, g);
+
+        // 抛物线模型：y = c1 * x^2 + c2 * x，取比弦更陡的初始斜率
+        const initSlope = Math.tan(chordAngle + 0.62 * beta);
+        const c2 = initSlope;
+        const c1 = (YB - c2 * XB) / (XB * XB);
+        const parabolaPts = [];
+        for (let i = 0; i <= numSamples; i++) {
+          const px = (i / numSamples) * XB;
+          const py = c1 * px * px + c2 * px;
+          parabolaPts.push({ x: px, y: py });
+        }
+        const parabolaSim = integrateArcLengthTrack(parabolaPts, g);
+
+        // 整理四轨对象并按到站总时间排序排名
+        const tracks = [
+          {
+            id: 'cycloid',
+            name: '摆线（最速降线）',
+            shortName: '摆线',
+            color: '#38bdf8',
+            pts: cycPts,
+            totalTime: T_cycloid,
+            evalAt: (tQuery) => {
+              const tc = Math.min(tQuery, T_cycloid);
+              const th = omegaCyc * tc;
+              const x = R * (th - Math.sin(th));
+              const y = R * (1.0 - Math.cos(th));
+              const halfTh = 0.5 * th;
+              const v = 2.0 * Math.sqrt(g * R) * Math.sin(halfTh);
+              const at = g * Math.cos(halfTh);
+              return {
+                x, y, v, at,
+                sinA: Math.cos(halfTh),
+                cosA: Math.sin(halfTh),
+                theta: th,
+                finished: tQuery >= T_cycloid
+              };
+            }
+          },
+          {
+            id: 'circle',
+            name: '圆弧轨道',
+            shortName: '圆弧',
+            color: '#fbbf24',
+            pts: circlePts,
+            totalTime: circleSim.totalTime,
+            evalAt: (tQuery) => evalInterpolatedHistory(circleSim.history, tQuery, circleSim.totalTime)
+          },
+          {
+            id: 'parabola',
+            name: '抛物线轨道',
+            shortName: '抛物线',
+            color: '#a78bfa',
+            pts: parabolaPts,
+            totalTime: parabolaSim.totalTime,
+            evalAt: (tQuery) => evalInterpolatedHistory(parabolaSim.history, tQuery, parabolaSim.totalTime)
+          },
+          {
+            id: 'line',
+            name: '直线轨道',
+            shortName: '直线',
+            color: '#fb7185',
+            pts: linePts,
+            totalTime: T_line,
+            evalAt: (tQuery) => {
+              const tc = Math.min(tQuery, T_line);
+              const s = 0.5 * aLine * tc * tc;
+              return {
+                x: s * cosAlpha,
+                y: s * sinAlpha,
+                v: aLine * tc,
+                at: aLine,
+                sinA: sinAlpha,
+                cosA: cosAlpha,
+                finished: tQuery >= T_line
+              };
+            }
+          }
+        ];
+
+        const sortedByTime = [...tracks].sort((a, b) => a.totalTime - b.totalTime);
+        sortedByTime.forEach((tr, idx) => {
+          tr.rank = idx + 1;
+        });
+
+        raceModel = {
+          R,
+          thetaB,
+          T_cycloid,
+          T_line,
+          T_circle: circleSim.totalTime,
+          T_parabola: parabolaSim.totalTime,
+          maxCycleTime: Math.max(T_line, circleSim.totalTime, parabolaSim.totalTime) * 1.18,
+          tracks,
+          sortedTracks: sortedByTime
+        };
+
+        // ---------------- 2. 等时性模式建模（完整摆线山谷 θ ∈ [0, 2π]） ----------------
+        const R_tauto = YB * 0.5; // 令谷底深度 2R = YB
+        const omegaTauto = Math.sqrt(g / R_tauto);
+        const T_fall = Math.PI / omegaTauto; // π√(R/g)
+
+        const valleyPts = [];
+        for (let i = 0; i <= 300; i++) {
+          const th = (i / 300) * TWO_PI;
+          valleyPts.push({
+            x: R_tauto * (th - Math.sin(th)),
+            y: R_tauto * (1.0 - Math.cos(th))
+          });
+        }
+
+        const beads = TAUTO_BEADS.map((cfg) => {
+          const th0 = cfg.theta0Deg * DEG2RAD;
+          const cosHalf0 = Math.cos(0.5 * th0);
+          return {
+            ...cfg,
+            th0,
+            x0: R_tauto * (th0 - Math.sin(th0)),
+            y0: R_tauto * (1.0 - Math.cos(th0)),
+            evalAt: (tQuery) => {
+              // 精确解析公式：cos(θ(t)/2) = cos(θ0/2) * cos(0.5 * √(g/R) * t)
+              const cosHalfT = cosHalf0 * Math.cos(0.5 * omegaTauto * tQuery);
+              const clamped = Math.max(-1.0, Math.min(1.0, cosHalfT));
+              const th = 2.0 * Math.acos(clamped);
+              const x = R_tauto * (th - Math.sin(th));
+              const y = R_tauto * (1.0 - Math.cos(th));
+              const y0 = R_tauto * (1.0 - Math.cos(th0));
+              const vMag = Math.sqrt(Math.max(0, 2.0 * g * (y0 - y)));
+              const dir = Math.sin(0.5 * omegaTauto * tQuery) >= 0 ? 1 : -1;
+              const halfTh = 0.5 * th;
+              return {
+                x, y, theta: th,
+                v: vMag,
+                dir,
+                at: g * Math.cos(halfTh),
+                sinA: Math.cos(halfTh),
+                cosA: Math.sin(halfTh)
+              };
+            }
+          };
+        });
+
+        tautoModel = {
+          R: R_tauto,
+          omega: omegaTauto,
+          T_fall,
+          maxCycleTime: T_fall * 2.0, // 展示完整单程摆动至对岸等高点并折返
+          valleyPts,
+          beads
+        };
+      }
+
+      /**
+       * 对弧长积分历史表进行线性插值采样
+       */
+      function evalInterpolatedHistory(hist, tQuery, totalTime) {
+        if (tQuery <= 0) {
+          const h0 = hist[0];
+          return { x: h0.x, y: h0.y, v: h0.v, at: h0.at, sinA: h0.sinA, cosA: h0.cosA, finished: false };
+        }
+        if (tQuery >= totalTime) {
+          const hEnd = hist[hist.length - 1];
+          return { x: hEnd.x, y: hEnd.y, v: hEnd.v, at: hEnd.at, sinA: hEnd.sinA, cosA: hEnd.cosA, finished: true };
+        }
+        let lo = 0, hi = hist.length - 1;
+        while (hi - lo > 1) {
+          const mid = (lo + hi) >> 1;
+          if (hist[mid].t <= tQuery) lo = mid;
+          else hi = mid;
+        }
+        const a = hist[lo];
+        const b = hist[hi];
+        const span = Math.max(1e-12, b.t - a.t);
+        const f = (tQuery - a.t) / span;
+        return {
+          x: a.x + f * (b.x - a.x),
+          y: a.y + f * (b.y - a.y),
+          v: a.v + f * (b.v - a.v),
+          at: a.at + f * (b.at - a.at),
+          sinA: a.sinA + f * (b.sinA - a.sinA),
+          cosA: a.cosA + f * (b.cosA - a.cosA),
+          finished: false
+        };
+      }
+
+      // ==========================================================================
+      // 3. DOM 节点绑定
+      // ==========================================================================
+      const mainCanvas = document.getElementById('mainViewportCanvas');
+      const velChartCanvas = document.getElementById('velChartCanvas');
+      const posChartCanvas = document.getElementById('posChartCanvas');
+
+      const modeRaceBtn = document.getElementById('modeRaceBtn');
+      const modeTautoBtn = document.getElementById('modeTautoBtn');
+      const presetBtns = document.querySelectorAll('.preset-btn');
+
+      const xbSliderCard = document.getElementById('xbSliderCard');
+      const xbSlider = document.getElementById('xbSlider');
+      const ybSlider = document.getElementById('ybSlider');
+      const ybSliderLabel = document.getElementById('ybSliderLabel');
+      const gSlider = document.getElementById('gSlider');
+      const speedSlider = document.getElementById('speedSlider');
+
+      const xbVal = document.getElementById('xbVal');
+      const ybVal = document.getElementById('ybVal');
+      const gVal = document.getElementById('gVal');
+      const speedVal = document.getElementById('speedVal');
+      const clockBadge = document.getElementById('clockBadge');
+
+      const playPauseBtn = document.getElementById('playPauseBtn');
+      const playIcon = document.getElementById('playIcon');
+      const playText = document.getElementById('playText');
+      const stepBtn = document.getElementById('stepBtn');
+      const resetBtn = document.getElementById('resetBtn');
+
+      const toggleWheel = document.getElementById('toggleWheel');
+      const toggleVectors = document.getElementById('toggleVectors');
+      const toggleTrails = document.getElementById('toggleTrails');
+
+      // 遥测与公式更新节点
+      const eqRadiusTag = document.getElementById('eqRadiusTag');
+      const eqThetaBTag = document.getElementById('eqThetaBTag');
+      const eqTautoTag = document.getElementById('eqTautoTag');
+      const valRadius = document.getElementById('valRadius');
+      const valMaxDepth = document.getElementById('valMaxDepth');
+      const valThetaB = document.getElementById('valThetaB');
+      const valDipStatus = document.getElementById('valDipStatus');
+      const metric3Title = document.getElementById('metric3Title');
+      const valTBest = document.getElementById('valTBest');
+      const valTimeSave = document.getElementById('valTimeSave');
+      const metric4Title = document.getElementById('metric4Title');
+      const valTLine = document.getElementById('valTLine');
+      const valVEnd = document.getElementById('valVEnd');
+
+      const viewportTitle = document.getElementById('viewportTitle');
+      const viewportLegend = document.getElementById('viewportLegend');
+      const rankingStrip = document.getElementById('rankingStrip');
+
+      const velChartDesc = document.getElementById('velChartDesc');
+      const velChartNote = document.getElementById('velChartNote');
+      const posChartTitle = document.getElementById('posChartTitle');
+      const posChartBadge = document.getElementById('posChartBadge');
+      const posChartDesc = document.getElementById('posChartDesc');
+      const posChartNote = document.getElementById('posChartNote');
+
+      // ==========================================================================
+      // 4. Canvas 高分屏适配与矢量绘图工具
+      // ==========================================================================
+      function setupHiDPICanvas(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(10, rect.width);
+        const h = Math.max(10, rect.height);
+        const targetW = Math.round(w * dpr);
+        const targetH = Math.round(h * dpr);
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+        }
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, w, h };
+      }
+
+      function drawRoundRect(ctx, x, y, w, h, r) {
+        const rad = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rad, y);
+        ctx.lineTo(x + w - rad, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+        ctx.lineTo(x + w, y + h - rad);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+        ctx.lineTo(x + rad, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+        ctx.lineTo(x, y + rad);
+        ctx.quadraticCurveTo(x, y, x + rad, y);
+        ctx.closePath();
+      }
+
+      function drawArrow2D(ctx, x1, y1, x2, y2, color, lineWidth = 2.2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.hypot(dx, dy);
+        if (len < 3) return;
+        const ang = Math.atan2(dy, dx);
+        const head = Math.min(10, Math.max(6, len * 0.26));
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2 - head * 0.65 * Math.cos(ang), y2 - head * 0.65 * Math.sin(ang));
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - head * Math.cos(ang - Math.PI / 6), y2 - head * Math.sin(ang - Math.PI / 6));
+        ctx.lineTo(x2 - head * Math.cos(ang + Math.PI / 6), y2 - head * Math.sin(ang + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 5. 中央主物理视口渲染 (mainViewportCanvas)
+      // ==========================================================================
+      function renderMainViewport() {
+        const { ctx, w, h } = setupHiDPICanvas(mainCanvas);
+
+        // 1. 深空实验室背景与重力场方向指示
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+        bgGrad.addColorStop(0, '#060a14');
+        bgGrad.addColorStop(1, '#0d1527');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        if (state.mode === 'race') {
+          renderRaceViewport(ctx, w, h);
+        } else {
+          renderTautochroneViewport(ctx, w, h);
+        }
+      }
+
+      // 模式 A：最速降线四轨竞速视口
+      function renderRaceViewport(ctx, w, h) {
+        const { XB, YB, g } = state;
+        const { R, thetaB, T_cycloid, tracks } = raceModel;
+
+        // 计算物理世界包围盒（当 θB > π 时，摆线最低点达到 y = 2R > YB）
+        const maxWorldX = Math.max(XB + 0.5, 4.5);
+        const lowestY = thetaB > Math.PI ? (2.0 * R) : YB;
+        const maxWorldY = Math.max(lowestY + 0.55, 2.8);
+
+        const padLeft = 58;
+        const padRight = 56;
+        const padTop = 88;
+        const padBottom = 46;
+
+        const scaleX = (w - padLeft - padRight) / maxWorldX;
+        const scaleY = (h - padTop - padBottom) / maxWorldY;
+        const scale = Math.min(scaleX, scaleY);
+
+        const ox = padLeft;
+        const oy = padTop;
+        const toPxX = (xm) => ox + xm * scale;
+        const toPxY = (ym) => oy + ym * scale;
+
+        lastViewportTransform = {
+          ox, oy, scale,
+          bxPx: toPxX(XB),
+          byPx: toPxY(YB)
+        };
+
+        // 1. 坐标网格与天花板基准线 y = 0
+        renderCoordinateGrid(ctx, w, h, ox, oy, scale, maxWorldX, maxWorldY);
+
+        // 2. 终点 B 水平与竖直参考虚线
+        const bx = toPxX(XB);
+        const by = toPxY(YB);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.28)';
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(ox, by);
+        ctx.lineTo(bx, by);
+        ctx.lineTo(bx, oy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // 3. 若 θB > π，高亮标注摆线“先潜入深渊 (y = 2R > Y_B) 再爬坡反超”的最低谷点
+        if (thetaB > Math.PI) {
+          const dipX = toPxX(Math.PI * R);
+          const dipY = toPxY(2.0 * R);
+          ctx.save();
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+          ctx.setLineDash([3, 3]);
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(dipX, by);
+          ctx.lineTo(dipX, dipY);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.arc(dipX, dipY, 3.8, 0, TWO_PI);
+          ctx.fill();
+
+          ctx.font = '600 10px ui-monospace, monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`谷底深潜 y_max=2R=${(2 * R).toFixed(2)}m (超终点 ${(2 * R - YB).toFixed(2)}m)`, dipX, dipY + 15);
+          ctx.restore();
+        }
+
+        // 4. 绘制四条光滑轨道（最后绘制青色摆线使其在最上层高亮）
+        const drawOrder = ['line', 'parabola', 'circle', 'cycloid'];
+        drawOrder.forEach((id) => {
+          const tr = tracks.find((item) => item.id === id);
+          if (!tr) return;
+          ctx.save();
+          ctx.strokeStyle = tr.color;
+          ctx.lineWidth = tr.id === 'cycloid' ? 3.2 : 2.1;
+          ctx.globalAlpha = tr.id === 'cycloid' ? 0.95 : 0.78;
+          if (tr.id === 'line') ctx.setLineDash([6, 4]);
+
+          ctx.beginPath();
+          tr.pts.forEach((p, idx) => {
+            const sx = toPxX(p.x);
+            const sy = toPxY(p.y);
+            if (idx === 0) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
+          });
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // 5. 摆线生成滚轮动画（沿 y = 0 无滑滚动的半径 R 透明圆）
+        const cycInst = tracks[0].evalAt(state.t);
+        if (state.showWheel) {
+          renderGeneratingWheel(ctx, ox, oy, scale, R, cycInst.theta);
+        }
+
+        // 6. 起点 A(0,0) 与可拖拽终点 B(X_B, Y_B) 靶标
+        renderEndpointsAB(ctx, ox, oy, bx, by, XB, YB);
+
+        // 7. 绘制四轨滑落小球、发光尾迹、矢量箭头与到站名次徽章
+        tracks.forEach((tr) => {
+          const inst = tr.evalAt(state.t);
+          const sx = toPxX(inst.x);
+          const sy = toPxY(inst.y);
+
+          // 尾迹
+          if (state.showTrails && state.t > 0.01) {
+            renderBeadTrail(ctx, tr, state.t, toPxX, toPxY);
+          }
+
+          // 速度与切向加速度矢量
+          if (state.showVectors && !inst.finished && inst.v > 0.05) {
+            const vLen = Math.min(54, inst.v * 7.5);
+            drawArrow2D(ctx, sx, sy, sx + inst.cosA * vLen, sy + inst.sinA * vLen, '#10b981', 2.0);
+          }
+
+          // 小球本体
+          drawBeadSphere(ctx, sx, sy, tr.id === 'cycloid' ? 8.2 : 7.0, tr.color);
+
+          // 到站排名徽章与精确时间戳
+          if (inst.finished) {
+            const badgeOffsetY = (tr.rank - 2.5) * 20;
+            const badgeX = bx + 12;
+            const badgeY = by + badgeOffsetY;
+            const tagText = `#${tr.rank} ${tr.shortName}: ${tr.totalTime.toFixed(3)}s`;
+
+            ctx.save();
+            ctx.font = '700 10px ui-monospace, monospace';
+            const tw = ctx.measureText(tagText).width + 10;
+            ctx.fillStyle = 'rgba(7, 11, 20, 0.9)';
+            drawRoundRect(ctx, badgeX, badgeY - 8, tw, 16, 4);
+            ctx.fill();
+            ctx.strokeStyle = tr.color;
+            ctx.lineWidth = 1.1;
+            ctx.stroke();
+
+            ctx.fillStyle = tr.color;
+            ctx.textAlign = 'left';
+            ctx.fillText(tagText, badgeX + 5, badgeY + 3.5);
+            ctx.restore();
+          }
+        });
+
+        // 8. 视口内悬浮解析公式与实时状态 HUD
+        renderCanvasFormulaHUD(ctx, [
+          `摆线解析式: x(θ) = R(θ - sinθ),  y(θ) = R(1 - cosθ)`,
+          `当前解: R = ${R.toFixed(3)} m,  θ_B = ${(thetaB * RAD2DEG).toFixed(1)}° (${thetaB.toFixed(3)} rad)`,
+          `摆线最优用时: T_摆线 = θ_B√(R/g) = ${T_cycloid.toFixed(3)} s`
+        ]);
+      }
+
+      // 模式 B：摆线等时性验证（五球同落）视口
+      function renderTautochroneViewport(ctx, w, h) {
+        const { g } = state;
+        const { R, T_fall, valleyPts, beads } = tautoModel;
+
+        const maxWorldX = TWO_PI * R + 0.4;
+        const maxWorldY = 2.0 * R + 0.55;
+
+        const padLeft = 56;
+        const padRight = 56;
+        const padTop = 92;
+        const padBottom = 46;
+
+        const scaleX = (w - padLeft - padRight) / maxWorldX;
+        const scaleY = (h - padTop - padBottom) / maxWorldY;
+        const scale = Math.min(scaleX, scaleY);
+
+        const ox = Math.max(padLeft, (w - TWO_PI * R * scale) * 0.5);
+        const oy = padTop;
+        const toPxX = (xm) => ox + xm * scale;
+        const toPxY = (ym) => oy + ym * scale;
+
+        // 1. 坐标网格与天花板基准线 y = 0
+        renderCoordinateGrid(ctx, w, h, ox, oy, scale, maxWorldX, maxWorldY);
+
+        // 2. 绘制对称摆线山谷轨道 θ ∈ [0, 2π]
+        ctx.save();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        valleyPts.forEach((p, i) => {
+          const sx = toPxX(p.x);
+          const sy = toPxY(p.y);
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        });
+        ctx.stroke();
+
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.8;
+        ctx.stroke();
+        ctx.restore();
+
+        // 3. 标注谷底汇聚点 (x = πR, y = 2R)
+        const botX = toPxX(Math.PI * R);
+        const botY = toPxY(2.0 * R);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.35)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(botX, oy);
+        ctx.lineTo(botX, botY + 14);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = '700 10.5px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`等时汇聚谷底 (θ = π, y = 2R = ${(2 * R).toFixed(2)}m)`, botX, botY + 24);
+        ctx.restore();
+
+        // 4. 若当前时刻接近 t = T_fall = π√(R/g)，绘制五球同时碰撞闪光环！
+        const dtToImpact = Math.abs(state.t - T_fall);
+        if (dtToImpact < 0.08) {
+          const pulse = 1.0 - dtToImpact / 0.08;
+          ctx.save();
+          ctx.strokeStyle = `rgba(251, 191, 36, ${(0.85 * pulse).toFixed(2)})`;
+          ctx.lineWidth = 3.0;
+          ctx.beginPath();
+          ctx.arc(botX, botY, 12 + 28 * (1 - pulse), 0, TWO_PI);
+          ctx.stroke();
+
+          const badgeText = `★ 五球同时撞击谷底！t = π√(R/g) = ${T_fall.toFixed(3)} s`;
+          ctx.font = '700 11px ui-monospace, monospace';
+          const tw = ctx.measureText(badgeText).width + 14;
+          ctx.fillStyle = 'rgba(7, 11, 20, 0.92)';
+          drawRoundRect(ctx, botX - tw * 0.5, botY - 42, tw, 20, 5);
+          ctx.fill();
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          ctx.fillStyle = '#fde68a';
+          ctx.fillText(badgeText, botX, botY - 28.5);
+          ctx.restore();
+        }
+
+        // 5. 摆线生成滚轮（对应 1 号球参数角）
+        const b1Inst = beads[0].evalAt(state.t);
+        if (state.showWheel) {
+          renderGeneratingWheel(ctx, ox, oy, scale, R, b1Inst.theta);
+        }
+
+        // 6. 渲染 5 个不同初始释放高度的小球
+        beads.forEach((b) => {
+          // 初始释放位置虚线标记
+          const sx0 = toPxX(b.x0);
+          const sy0 = toPxY(b.y0);
+          ctx.save();
+          ctx.strokeStyle = b.color;
+          ctx.globalAlpha = 0.45;
+          ctx.beginPath();
+          ctx.arc(sx0, sy0, 4.5, 0, TWO_PI);
+          ctx.stroke();
+          ctx.restore();
+
+          const inst = b.evalAt(state.t);
+          const sx = toPxX(inst.x);
+          const sy = toPxY(inst.y);
+
+          if (state.showVectors && inst.v > 0.05) {
+            const vLen = Math.min(48, inst.v * 7.5);
+            drawArrow2D(ctx, sx, sy, sx + inst.dir * inst.cosA * vLen, sy + inst.dir * inst.sinA * vLen, b.color, 1.9);
+          }
+
+          drawBeadSphere(ctx, sx, sy, 7.6, b.color);
+        });
+
+        // 7. 视口内悬浮等时性解析公式 HUD
+        renderCanvasFormulaHUD(ctx, [
+          `等时性精确解: cos(θ(t)/2) = cos(θ₀/2) · cos(½√(g/R)·t)`,
+          `落底时间: T_fall = π√(R/g) = ${T_fall.toFixed(3)} s（与释放高度 θ₀ 无关）`,
+          `当前谷深 2R = ${(2 * R).toFixed(2)} m,  生成圆半径 R = ${R.toFixed(3)} m`
+        ]);
+      }
+
+      // 绘制坐标网格与重力矢量标尺
+      function renderCoordinateGrid(ctx, w, h, ox, oy, scale, maxWorldX, maxWorldY) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.07)';
+        ctx.lineWidth = 1;
+        ctx.font = '500 9.5px ui-monospace, monospace';
+        ctx.fillStyle = '#64748b';
+
+        for (let xm = 0; xm <= maxWorldX + 0.5; xm += 0.5) {
+          const sx = ox + xm * scale;
+          if (sx > w - 16) break;
+          ctx.beginPath();
+          ctx.moveTo(sx, oy);
+          ctx.lineTo(sx, h - 18);
+          ctx.stroke();
+          if (Math.abs(xm - Math.round(xm)) < 1e-4) {
+            ctx.textAlign = 'center';
+            ctx.fillText(`${xm.toFixed(0)}m`, sx, oy - 7);
+          }
+        }
+
+        for (let ym = 0.5; ym <= maxWorldY + 0.5; ym += 0.5) {
+          const sy = oy + ym * scale;
+          if (sy > h - 18) break;
+          ctx.beginPath();
+          ctx.moveTo(ox, sy);
+          ctx.lineTo(w - 16, sy);
+          ctx.stroke();
+          if (Math.abs(ym - Math.round(ym)) < 1e-4) {
+            ctx.textAlign = 'right';
+            ctx.fillText(`${ym.toFixed(0)}m`, ox - 7, sy + 3);
+          }
+        }
+
+        // y = 0 水平基准天花板线（生成滚轮滚动轨道）
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.36)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(ox - 10, oy);
+        ctx.lineTo(w - 16, oy);
+        ctx.stroke();
+
+        // 右上角重力方向指示箭头
+        const gx = w - 34;
+        const gy = oy + 14;
+        drawArrow2D(ctx, gx, gy, gx, gy + 34, '#94a3b8', 2.0);
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'center';
+        ctx.fillText(`g=${state.g.toFixed(1)}`, gx, gy + 46);
+        ctx.restore();
+      }
+
+      // 绘制沿 y = 0 无滑滚动的摆线生成滚轮
+      function renderGeneratingWheel(ctx, ox, oy, scale, R, theta) {
+        const wheelCx = ox + R * theta * scale;
+        const wheelCy = oy + R * scale;
+        const wheelRpx = R * scale;
+        const contactX = wheelCx;
+        const contactY = oy;
+
+        const traceX = ox + R * (theta - Math.sin(theta)) * scale;
+        const traceY = oy + R * (1.0 - Math.cos(theta)) * scale;
+
+        ctx.save();
+        // 滚轮外圈
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.34)';
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(wheelCx, wheelCy, wheelRpx, 0, TWO_PI);
+        ctx.fill();
+        ctx.stroke();
+
+        // 轮心到天花板切点与追踪定点的辐条
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(contactX, contactY);
+        ctx.lineTo(wheelCx, wheelCy);
+        ctx.lineTo(traceX, traceY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 轮心圆点
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(wheelCx, wheelCy, 3.0, 0, TWO_PI);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 绘制起点 A 与可拖拽终点 B
+      function renderEndpointsAB(ctx, ox, oy, bx, by, XB, YB) {
+        ctx.save();
+        // 起点 A
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(ox, oy, 5.0, 0, TWO_PI);
+        ctx.fill();
+        ctx.font = '700 10.5px ui-monospace, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText('A(0,0)', ox - 8, oy + 4);
+
+        // 终点 B 拖拽靶标外环
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.65)';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(bx, by, 12, 0, TWO_PI);
+        ctx.stroke();
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(bx, by, 5.2, 0, TWO_PI);
+        ctx.fill();
+
+        ctx.fillStyle = '#fde68a';
+        ctx.textAlign = 'center';
+        ctx.fillText(`终点 B(${XB.toFixed(2)}, ${YB.toFixed(2)}) [可拖拽]`, bx, by + 25);
+        ctx.restore();
+      }
+
+      function renderBeadTrail(ctx, tr, tCur, toPxX, toPxY) {
+        const steps = 26;
+        const span = Math.min(tCur, tr.totalTime);
+        ctx.save();
+        ctx.strokeStyle = tr.color;
+        ctx.lineWidth = 3.2;
+        ctx.globalAlpha = 0.26;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const ti = (i / steps) * span;
+          const p = tr.evalAt(ti);
+          const sx = toPxX(p.x);
+          const sy = toPxY(p.y);
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawBeadSphere(ctx, x, y, r, color) {
+        ctx.save();
+        const grad = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.4, color);
+        grad.addColorStop(1, '#070b14');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, TWO_PI);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function renderCanvasFormulaHUD(ctx, lines) {
+        const bx = 14;
+        const by = 12;
+        const bw = 372;
+        const bh = 16 + lines.length * 17;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(7, 11, 20, 0.86)';
+        drawRoundRect(ctx, bx, by, bw, bh, 8);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.32)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.font = '600 10.5px ui-monospace, monospace';
+        ctx.textAlign = 'left';
+        lines.forEach((txt, i) => {
+          ctx.fillStyle = i === 0 ? '#38bdf8' : (i === 1 ? '#fde68a' : '#34d399');
+          ctx.fillText(txt, bx + 11, by + 20 + i * 17);
+        });
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 6. 右侧双联同步遥测图表渲染
+      // ==========================================================================
+      function renderRightTelemetryCharts() {
+        renderVelocityChart();
+        renderPositionChart();
+      }
+
+      // 上图：瞬时速率演化曲线 v(t)
+      function renderVelocityChart() {
+        const { ctx, w, h } = setupHiDPICanvas(velChartCanvas);
+        const pad = { top: 18, right: 16, bottom: 28, left: 42 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+
+        const isRace = (state.mode === 'race');
+        const maxT = isRace ? raceModel.maxCycleTime : tautoModel.maxCycleTime;
+        const maxDropY = isRace ? Math.max(state.YB, raceModel.thetaB > Math.PI ? 2 * raceModel.R : state.YB) : (2 * tautoModel.R);
+        const maxV = Math.max(1.0, Math.sqrt(2.0 * state.g * maxDropY) * 1.15);
+
+        const toX = (tv) => pad.left + (tv / maxT) * plotW;
+        const toY = (vv) => pad.top + plotH - (vv / maxV) * plotH;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#060a14';
+        ctx.fillRect(0, 0, w, h);
+
+        // 网格与坐标轴
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.font = '500 9.5px ui-monospace, monospace';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'right';
+
+        for (let i = 1; i <= 3; i++) {
+          const vv = (i / 3) * maxV;
+          const py = toY(vv);
+          ctx.beginPath();
+          ctx.moveTo(pad.left, py);
+          ctx.lineTo(pad.left + plotW, py);
+          ctx.stroke();
+          ctx.fillText(vv.toFixed(1), pad.left - 5, py + 3);
+        }
+
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.lineTo(pad.left + plotW, pad.top + plotH);
+        ctx.stroke();
+
+        ctx.fillText('0', pad.left - 5, pad.top + plotH + 3);
+        ctx.textAlign = 'center';
+        ctx.fillText('0s', pad.left + 8, pad.top + plotH + 14);
+        ctx.fillText(`${(maxT * 0.5).toFixed(2)}s`, pad.left + plotW * 0.5, pad.top + plotH + 14);
+        ctx.fillText(`${maxT.toFixed(2)}s`, pad.left + plotW - 10, pad.top + plotH + 14);
+        ctx.restore();
+
+        const steps = 140;
+        if (isRace) {
+          raceModel.tracks.forEach((tr) => {
+            ctx.save();
+            ctx.strokeStyle = tr.color;
+            ctx.lineWidth = tr.id === 'cycloid' ? 2.3 : 1.7;
+            ctx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+              const ti = (i / steps) * tr.totalTime;
+              const v = tr.evalAt(ti).v;
+              const px = toX(ti);
+              const py = toY(v);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            const cur = tr.evalAt(state.t);
+            const curT = Math.min(state.t, tr.totalTime);
+            drawTracker(ctx, toX(curT), toY(cur.v), tr.color, 3.8);
+            ctx.restore();
+          });
+        } else {
+          tautoModel.beads.forEach((b) => {
+            ctx.save();
+            ctx.strokeStyle = b.color;
+            ctx.lineWidth = 1.9;
+            ctx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+              const ti = (i / steps) * maxT;
+              const v = b.evalAt(ti).v;
+              const px = toX(ti);
+              const py = toY(v);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            const cur = b.evalAt(state.t);
+            drawTracker(ctx, toX(state.t), toY(cur.v), b.color, 3.8);
+            ctx.restore();
+          });
+        }
+      }
+
+      // 下图：水平推进 x(t)（竞速模式） / 竖直下落高度 y(t)（等时性模式）
+      function renderPositionChart() {
+        const { ctx, w, h } = setupHiDPICanvas(posChartCanvas);
+        const pad = { top: 18, right: 16, bottom: 28, left: 42 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+
+        const isRace = (state.mode === 'race');
+        const maxT = isRace ? raceModel.maxCycleTime : tautoModel.maxCycleTime;
+        const maxVal = isRace ? (state.XB * 1.12) : (2.0 * tautoModel.R * 1.12);
+
+        const toX = (tv) => pad.left + (tv / maxT) * plotW;
+        const toY = (val) => pad.top + plotH - (val / maxVal) * plotH;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#060a14';
+        ctx.fillRect(0, 0, w, h);
+
+        // 目标参考线
+        const targetVal = isRace ? state.XB : (2.0 * tautoModel.R);
+        const targetY = toY(targetVal);
+
+        ctx.save();
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.35)';
+        ctx.setLineDash([4, 3]);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, targetY);
+        ctx.lineTo(pad.left + plotW, targetY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = '#fde68a';
+        ctx.font = '600 9.5px ui-monospace, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(isRace ? `终点 X_B=${state.XB.toFixed(2)}m` : `谷底 2R=${targetVal.toFixed(2)}m`, pad.left + plotW - 4, targetY - 4);
+
+        // 等时性模式下绘出落底时刻垂直虚线 t = π√(R/g)
+        if (!isRace) {
+          const tFallX = toX(tautoModel.T_fall);
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(tFallX, pad.top);
+          ctx.lineTo(tFallX, pad.top + plotH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // 坐标轴
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.lineTo(pad.left + plotW, pad.top + plotH);
+        ctx.stroke();
+
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('0', pad.left - 5, pad.top + plotH + 3);
+        ctx.textAlign = 'center';
+        ctx.fillText('0s', pad.left + 8, pad.top + plotH + 14);
+        ctx.fillText(`${maxT.toFixed(2)}s`, pad.left + plotW - 10, pad.top + plotH + 14);
+        ctx.restore();
+
+        const steps = 140;
+        if (isRace) {
+          raceModel.tracks.forEach((tr) => {
+            ctx.save();
+            ctx.strokeStyle = tr.color;
+            ctx.lineWidth = tr.id === 'cycloid' ? 2.3 : 1.7;
+            ctx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+              const ti = (i / steps) * tr.totalTime;
+              const xVal = tr.evalAt(ti).x;
+              const px = toX(ti);
+              const py = toY(xVal);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            const cur = tr.evalAt(state.t);
+            const curT = Math.min(state.t, tr.totalTime);
+            drawTracker(ctx, toX(curT), toY(cur.x), tr.color, 3.8);
+            ctx.restore();
+          });
+        } else {
+          // 5 条 y(t) 曲线在 (t = T_fall, y = 2R) 处交汇于同一点！
+          tautoModel.beads.forEach((b) => {
+            ctx.save();
+            ctx.strokeStyle = b.color;
+            ctx.lineWidth = 1.9;
+            ctx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+              const ti = (i / steps) * maxT;
+              const yVal = b.evalAt(ti).y;
+              const px = toX(ti);
+              const py = toY(yVal);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            const cur = b.evalAt(state.t);
+            drawTracker(ctx, toX(state.t), toY(cur.y), b.color, 3.8);
+            ctx.restore();
+          });
+        }
+      }
+
+      function drawTracker(ctx, cx, cy, color, radius) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, TWO_PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 7. 左侧公式参数与底部排行榜状态刷新
+      // ==========================================================================
+      function syncFormulaAndMetricsUI() {
+        const isRace = (state.mode === 'race');
+        const activeR = isRace ? raceModel.R : tautoModel.R;
+        const { thetaB, T_cycloid, T_line, sortedTracks } = raceModel;
+        const { T_fall } = tautoModel;
+
+        clockBadge.textContent = `t = ${state.t.toFixed(3)} s`;
+        eqRadiusTag.textContent = `R = ${activeR.toFixed(3)} m`;
+        eqThetaBTag.textContent = `θ_B = ${thetaB.toFixed(3)} rad`;
+        eqTautoTag.textContent = `T_fall = ${T_fall.toFixed(3)} s`;
+
+        valRadius.textContent = `${activeR.toFixed(3)} m`;
+        valMaxDepth.textContent = `谷底深度 2R = ${(2 * activeR).toFixed(3)} m`;
+
+        if (isRace) {
+          valThetaB.textContent = `${(thetaB * RAD2DEG).toFixed(1)}° (${thetaB.toFixed(2)} rad)`;
+          valDipStatus.textContent = thetaB > Math.PI
+            ? `已超半周 (θ_B > 180°)，先深潜再爬坡`
+            : `单调下降（未超半周 θ_B ≤ 180°）`;
+
+          metric3Title.innerHTML = '摆线夺冠用时 <i class="math-i">T</i><sub>摆线</sub>';
+          valTBest.textContent = `${T_cycloid.toFixed(3)} s`;
+          const diffT = T_line - T_cycloid;
+          const pct = (diffT / T_line) * 100;
+          valTimeSave.textContent = `比直线快 ${diffT.toFixed(3)} s (-${pct.toFixed(1)}%)`;
+
+          metric4Title.innerHTML = '直线用时 <i class="math-i">T</i><sub>直线</sub>';
+          valTLine.textContent = `${T_line.toFixed(3)} s`;
+          const vEnd = Math.sqrt(2.0 * state.g * state.YB);
+          valVEnd.textContent = `终点速率 v_B = ${vEnd.toFixed(2)} m/s`;
+
+          // 刷新底部四轨竞速排行榜卡片
+          rankingStrip.innerHTML = sortedTracks.map((tr) => `
+            <div class="rank-card" style="border-left: 3px solid ${tr.color};">
+              <div class="rank-top">
+                <span style="color:${tr.color};">第 ${tr.rank} 名 · ${tr.shortName}</span>
+                <span class="mono" style="color:#64748b;">${tr.rank === 1 ? '冠军' : '+' + (tr.totalTime - T_cycloid).toFixed(3) + 's'}</span>
+              </div>
+              <div class="rank-time mono">${tr.totalTime.toFixed(3)} s</div>
+            </div>
+          `).join('');
+
+          const vMaxCyc = 2.0 * Math.sqrt(state.g * raceModel.R) * Math.sin(Math.min(Math.PI, thetaB) * 0.5);
+          velChartNote.textContent = `v_max = ${vMaxCyc.toFixed(2)} m/s`;
+          posChartTitle.innerHTML = '水平推进位移 <i class="math-i">x</i>(<i class="math-i">t</i>) 反超曲线';
+          posChartBadge.textContent = 'x(t) → X_B';
+          posChartDesc.textContent = '观测青色摆线曲线如何利用早期高速度在后半程反超所有轨道';
+          posChartNote.textContent = `X_B = ${state.XB.toFixed(2)} m`;
+        } else {
+          valThetaB.textContent = `180.0° (谷底 θ = π)`;
+          valDipStatus.textContent = `5 球初始角: 25°, 55°, 85°, 115°, 145°`;
+
+          metric3Title.innerHTML = '统一落底时间 <i class="math-i">T</i><sub>落底</sub>';
+          valTBest.textContent = `${T_fall.toFixed(3)} s`;
+          valTimeSave.textContent = `公式 π√(R/g) 严格独立于释放高度`;
+
+          metric4Title.innerHTML = '半周期 / 往返周期';
+          valTLine.textContent = `${(2 * T_fall).toFixed(3)} s`;
+          const vMaxTop = Math.sqrt(2.0 * state.g * (2 * activeR));
+          valVEnd.textContent = `谷底最大可能速率: ${vMaxTop.toFixed(2)} m/s`;
+
+          rankingStrip.innerHTML = tautoModel.beads.slice(0, 4).map((b) => `
+            <div class="rank-card" style="border-left: 3px solid ${b.color};">
+              <div class="rank-top">
+                <span style="color:${b.color};">${b.name}</span>
+                <span class="mono" style="color:#10b981;">同时抵达</span>
+              </div>
+              <div class="rank-time mono">t = ${T_fall.toFixed(3)} s</div>
+            </div>
+          `).join('');
+
+          const vMax5 = tautoModel.beads[4].evalAt(T_fall).v;
+          velChartNote.textContent = `5号球谷底速率 = ${vMax5.toFixed(2)} m/s`;
+          posChartTitle.innerHTML = '竖直下落高度 <i class="math-i">y</i>(<i class="math-i">t</i>) 等时汇聚图';
+          posChartBadge.textContent = '5 线交汇于 π√(R/g)';
+          posChartDesc.textContent = '5 条不同高度起点的 y(t) 曲线在 t = π√(R/g) 处严格交汇于谷底 2R';
+          posChartNote.textContent = `2R = ${(2 * activeR).toFixed(2)} m`;
+        }
+      }
+
+      function renderAll() {
+        syncFormulaAndMetricsUI();
+        renderMainViewport();
+        renderRightTelemetryCharts();
+      }
+
+      // ==========================================================================
+      // 8. 动画循环与交互事件监听
+      // ==========================================================================
+      function setPlayState(playing) {
+        state.isPlaying = playing;
+        playIcon.textContent = playing ? '❚❚' : '▶';
+        playText.textContent = playing ? '暂停' : '播放';
+      }
+
+      function animateLoop(timestamp) {
+        try {
+          if (state.lastFrameTime === null) {
+            state.lastFrameTime = timestamp;
+          }
+          const rawDt = (timestamp - state.lastFrameTime) / 1000;
+          state.lastFrameTime = timestamp;
+          const dt = Math.min(rawDt, 0.05);
+
+          if (state.isPlaying && !isDraggingTarget) {
+            const maxT = state.mode === 'race' ? raceModel.maxCycleTime : tautoModel.maxCycleTime;
+            state.t += dt * state.speed;
+            if (state.t >= maxT) {
+              state.t = 0.0;
+            }
+          }
+
+          renderAll();
+        } catch (err) {
+          console.error('最速降线仿真循环异常:', err);
+        }
+        requestAnimationFrame(animateLoop);
+      }
+
+      function switchMode(newMode) {
+        state.mode = newMode;
+        modeRaceBtn.classList.toggle('active', newMode === 'race');
+        modeTautoBtn.classList.toggle('active', newMode === 'tautochrone');
+
+        if (newMode === 'race') {
+          xbSliderCard.style.opacity = '1';
+          xbSlider.disabled = false;
+          ybSliderLabel.innerHTML = '终点下落 <i class="math-i">Y</i><sub>B</sub>';
+          viewportTitle.textContent = '重力场四轨光滑滑落实时竞速视口';
+          viewportLegend.innerHTML = `
+            <span class="leg-item"><i class="leg-dot" style="background:#38bdf8;"></i>摆线（最速降线）</span>
+            <span class="leg-item"><i class="leg-dot" style="background:#fbbf24;"></i>圆弧</span>
+            <span class="leg-item"><i class="leg-dot" style="background:#a78bfa;"></i>抛物线</span>
+            <span class="leg-item"><i class="leg-dot" style="background:#fb7185;"></i>直线</span>
+          `;
+        } else {
+          xbSliderCard.style.opacity = '0.45';
+          xbSlider.disabled = true;
+          ybSliderLabel.innerHTML = '山谷总深 <i class="math-i">2R</i>';
+          viewportTitle.textContent = '摆线等时性（Tautochrone）五球同时落底验证视口';
+          viewportLegend.innerHTML = `
+            <span class="leg-item"><i class="leg-dot" style="background:#38bdf8;"></i>25°</span>
+            <span class="leg-item"><i class="leg-dot" style="background:#10b981;"></i>55°</span>
+            <span class="leg-item"><i class="leg-dot" style="background:#fbbf24;"></i>85°</span>
+            <span class="leg-item"><i class="leg-dot" style="background:#a78bfa;"></i>115°</span>
+            <span class="leg-item"><i class="leg-dot" style="background:#fb7185;"></i>145°</span>
+          `;
+        }
+
+        state.t = 0.0;
+        rebuildPhysicsModels();
+        renderAll();
+      }
+
+      modeRaceBtn.addEventListener('click', () => {
+        presetBtns.forEach((b) => b.classList.remove('active'));
+        switchMode('race');
+      });
+
+      modeTautoBtn.addEventListener('click', () => {
+        presetBtns.forEach((b) => b.classList.remove('active'));
+        document.querySelector('[data-preset="tautochrone5"]').classList.add('active');
+        switchMode('tautochrone');
+      });
+
+      presetBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const cfg = PRESETS[btn.dataset.preset];
+          if (!cfg) return;
+
+          presetBtns.forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          state.XB = cfg.XB;
+          state.YB = cfg.YB;
+          state.g = cfg.g;
+
+          xbSlider.value = cfg.XB;
+          ybSlider.value = cfg.YB;
+          gSlider.value = cfg.g;
+
+          syncSliderLabels();
+          switchMode(cfg.mode);
+          setPlayState(true);
+        });
+      });
+
+      function syncSliderLabels() {
+        xbVal.textContent = `${state.XB.toFixed(2)} m`;
+        ybVal.textContent = `${state.YB.toFixed(2)} m`;
+        gVal.textContent = `${state.g.toFixed(2)} m/s²`;
+        speedVal.textContent = `${state.speed.toFixed(2)}x`;
+      }
+
+      function onParamSliderInput() {
+        presetBtns.forEach((b) => b.classList.remove('active'));
+        state.XB = parseFloat(xbSlider.value);
+        state.YB = parseFloat(ybSlider.value);
+        state.g = parseFloat(gSlider.value);
+        state.t = 0.0;
+        syncSliderLabels();
+        rebuildPhysicsModels();
+        renderAll();
+      }
+
+      xbSlider.addEventListener('input', onParamSliderInput);
+      ybSlider.addEventListener('input', onParamSliderInput);
+      gSlider.addEventListener('input', onParamSliderInput);
+
+      speedSlider.addEventListener('input', (e) => {
+        state.speed = parseFloat(e.target.value);
+        speedVal.textContent = `${state.speed.toFixed(2)}x`;
+      });
+
+      playPauseBtn.addEventListener('click', () => {
+        setPlayState(!state.isPlaying);
+      });
+
+      stepBtn.addEventListener('click', () => {
+        setPlayState(false);
+        const maxT = state.mode === 'race' ? raceModel.maxCycleTime : tautoModel.maxCycleTime;
+        state.t = (state.t + 0.02) % maxT;
+        renderAll();
+      });
+
+      resetBtn.addEventListener('click', () => {
+        state.t = 0.0;
+        setPlayState(true);
+        renderAll();
+      });
+
+      toggleWheel.addEventListener('change', (e) => {
+        state.showWheel = e.target.checked;
+        renderAll();
+      });
+
+      toggleVectors.addEventListener('change', (e) => {
+        state.showVectors = e.target.checked;
+        renderAll();
+      });
+
+      toggleTrails.addEventListener('change', (e) => {
+        state.showTrails = e.target.checked;
+        renderAll();
+      });
+
+      // ==========================================================================
+      // 9. 主视口鼠标/触摸直接拖拽终点 B(X_B, Y_B) 实时重算所有轨道
+      // ==========================================================================
+      mainCanvas.addEventListener('pointerdown', (e) => {
+        if (state.mode !== 'race') return;
+        const rect = mainCanvas.getBoundingClientRect();
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+
+        if (Math.hypot(px - lastViewportTransform.bxPx, py - lastViewportTransform.byPx) <= 26) {
+          isDraggingTarget = true;
+          presetBtns.forEach((b) => b.classList.remove('active'));
+          mainCanvas.setPointerCapture(e.pointerId);
+        }
+      });
+
+      mainCanvas.addEventListener('pointermove', (e) => {
+        if (!isDraggingTarget) return;
+        const rect = mainCanvas.getBoundingClientRect();
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+
+        const { ox, oy, scale } = lastViewportTransform;
+        let newXB = Math.round(((px - ox) / scale) * 20) / 20;
+        let newYB = Math.round(((py - oy) / scale) * 20) / 20;
+
+        newXB = Math.max(1.0, Math.min(6.5, newXB));
+        newYB = Math.max(0.8, Math.min(4.0, newYB));
+
+        state.XB = newXB;
+        state.YB = newYB;
+        xbSlider.value = newXB;
+        ybSlider.value = newYB;
+        state.t = 0.0;
+
+        syncSliderLabels();
+        rebuildPhysicsModels();
+        renderAll();
+      });
+
+      mainCanvas.addEventListener('pointerup', (e) => {
+        if (!isDraggingTarget) return;
+        isDraggingTarget = false;
+        mainCanvas.releasePointerCapture(e.pointerId);
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && document.activeElement.tagName !== 'BUTTON' && document.activeElement.tagName !== 'INPUT') {
+          e.preventDefault();
+          playPauseBtn.click();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        renderAll();
+      });
+
+      window.onload = function () {
+        syncSliderLabels();
+        rebuildPhysicsModels();
+        renderAll();
+        requestAnimationFrame(animateLoop);
+      };
+    })();
+  </script>
+</body>
+</html>

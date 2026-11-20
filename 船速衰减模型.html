@@ -3,897 +3,2640 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>物理实验模拟 2-7：汽艇受线性水阻力的减速运动</title>
+  <title>物理实验模拟 2-7：汽艇受线性水阻力的减速运动（WebGL 电影级实验室）</title>
   <style>
+    /* ==========================================================================
+       1. 深空海洋光学实验室设计令牌 (Zero-Dependency)
+       ========================================================================== */
     :root {
-      --bg: #0f172a;
-      --panel: #1e293b;
-      --panel-border: #334155;
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
-      --green: #22c55e;
-      --orange: #f97316;
-      --red: #ef4444;
-      --purple: #a855f7;
+      --bg-void: #050a15;
+      --bg-panel: #0b1326;
+      --bg-panel-glass: rgba(11, 19, 38, 0.92);
+      --bg-sub: rgba(5, 10, 21, 0.88);
+      --border-dim: #1d2d4e;
+      --border-glow: rgba(56, 189, 248, 0.45);
+
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --c-cyan: #38bdf8;      /* 位移 x(t) & 全景航道 & 无阻力参照 */
+      --c-emerald: #10b981;   /* 速度 v(t) & 矢量箭头 */
+      --c-coral: #fb7185;     /* 水阻力 F_f & 极限停靠线 x_max */
+      --c-amber: #f59e0b;     /* 动能 E_k(t) & 航行灯 */
+      --c-purple: #a855f7;    /* 特征弛豫时间 τ 里程碑 */
+
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 7px;
+      --shadow-card: 0 20px 45px -12px rgba(2, 6, 23, 0.95);
     }
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background-color: var(--bg-void);
+      background-image:
+        radial-gradient(circle at 12% 0%, rgba(56, 189, 248, 0.09) 0%, transparent 42%),
+        radial-gradient(circle at 88% 5%, rgba(16, 185, 129, 0.07) 0%, transparent 42%),
+        linear-gradient(180deg, #050a15 0%, #081022 60%, #0c162e 100%);
+      color: var(--text-primary);
       line-height: 1.5;
-      padding: 16px;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    header {
-      background: var(--panel);
-      border: 1px solid var(--panel-border);
-      border-radius: 12px;
-      padding: 14px 18px;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-    .title-block h1 {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .badge {
-      background: rgba(56, 189, 248, 0.15);
-      color: var(--accent);
-      border: 1px solid rgba(56, 189, 248, 0.35);
-      font-size: 0.75rem;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-weight: 600;
-    }
-    .problem-text {
-      font-size: 0.85rem;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-    .formula-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .pill {
-      background: #0f172a;
-      border: 1px solid var(--panel-border);
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-family: "Times New Roman", Georgia, serif;
-      color: #e2e8f0;
-    }
-    .pill span {
-      color: var(--accent);
-      font-family: sans-serif;
-      font-size: 0.75rem;
-      margin-right: 4px;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
 
-    .main-grid {
-      display: grid;
-      grid-template-columns: 320px 1fr;
-      gap: 14px;
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-variant-numeric: tabular-nums;
     }
-    @media (max-width: 900px) {
-      .main-grid {
+
+    .math-i {
+      font-family: "Times New Roman", Georgia, serif;
+      font-style: italic;
+    }
+
+    .frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      margin: 0 2px;
+      font-size: 0.85em;
+      line-height: 1.05;
+    }
+    .frac > span:first-child {
+      border-bottom: 1px solid currentColor;
+      padding: 0 3px 1px;
+    }
+    .frac > span:last-child {
+      padding: 1px 3px 0;
+    }
+
+    /* ==========================================================================
+       2. 顶部实验室导航栏与解析公式胶囊
+       ========================================================================== */
+    .topbar {
+      background: rgba(5, 10, 21, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-dim);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .topbar-inner {
+      max-width: 1720px;
+      margin: 0 auto;
+      padding: 10px 18px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(16, 185, 129, 0.16));
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.22);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.02rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .lab-badge {
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.14);
+      color: var(--c-cyan);
+      border: 1px solid rgba(56, 189, 248, 0.38);
+    }
+
+    .brand-sub {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .header-formulas {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .hf-pill {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-dim);
+      border-radius: 9px;
+      padding: 4px 11px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .hf-pill.highlight {
+      border-color: rgba(16, 185, 129, 0.42);
+      background: linear-gradient(145deg, #0b1326, #0d2324);
+    }
+
+    .hf-label {
+      font-size: 0.63rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .hf-pill.highlight .hf-label {
+      color: var(--c-emerald);
+    }
+
+    .hf-math {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+
+    /* ==========================================================================
+       3. 主工作台响应式网格 (左侧控制遥测 + 右侧双层视口与三联图表)
+       ========================================================================== */
+    .workspace-shell {
+      max-width: 1720px;
+      margin: 0 auto;
+      padding: 14px 18px 26px;
+      display: grid;
+      grid-template-columns: 344px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    @media (max-width: 1080px) {
+      .workspace-shell {
         grid-template-columns: 1fr;
       }
     }
 
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--panel-border);
-      border-radius: 12px;
-      padding: 14px;
+    @media (max-width: 600px) {
+      .workspace-shell {
+        padding: 10px 10px 22px;
+      }
+      .topbar-inner {
+        padding: 9px 12px;
+      }
     }
-    .card-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #e2e8f0;
+
+    .sidebar-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .main-stage-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .card {
+      background: var(--bg-panel-glass);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-lg);
+      padding: 13px 14px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
       margin-bottom: 10px;
+    }
+
+    .card-title {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .led-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--c-cyan);
+      box-shadow: 0 0 8px var(--c-cyan);
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       4. 工况预设、滑块、倍速胶囊、播放按钮与开关
+       ========================================================================== */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .preset-btn {
+      background: var(--bg-sub);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-md);
+      padding: 6px 8px;
+      color: var(--text-secondary);
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    .preset-btn:hover {
+      border-color: rgba(56, 189, 248, 0.45);
+      color: #f8fafc;
+      background: rgba(16, 28, 56, 0.95);
+    }
+
+    .preset-btn.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(16, 185, 129, 0.1));
+      border-color: var(--c-cyan);
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 var(--c-cyan);
+    }
+
+    .preset-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .preset-sub {
+      font-size: 0.63rem;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    .sliders-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .slider-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    @media (max-width: 400px) {
+      .slider-pair {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .slider-card {
+      background: var(--bg-sub);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-md);
+      padding: 6px 9px;
+    }
+
+    .slider-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 3px;
+      font-size: 0.72rem;
+      gap: 4px;
     }
 
-    /* Controls */
-    .preset-group {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-      margin-bottom: 14px;
-    }
-    .preset-btn {
-      background: #0f172a;
-      color: var(--muted);
-      border: 1px solid var(--panel-border);
-      border-radius: 8px;
-      padding: 7px 4px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: all 0.15s;
+    .slider-label {
+      color: #cbd5e1;
       font-weight: 500;
     }
-    .preset-btn:hover {
-      border-color: var(--accent);
-      color: #fff;
-    }
-    .preset-btn.active {
-      background: rgba(56, 189, 248, 0.18);
-      border-color: var(--accent);
-      color: var(--accent);
-      font-weight: 600;
+
+    .slider-badge {
+      font-size: 0.69rem;
+      font-weight: 700;
+      color: var(--c-cyan);
+      background: rgba(56, 189, 248, 0.11);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 1px 5px;
+      border-radius: 5px;
+      white-space: nowrap;
     }
 
-    .control-item {
-      margin-bottom: 12px;
-    }
-    .control-header {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.82rem;
-      margin-bottom: 4px;
-    }
-    .control-header label {
-      color: #cbd5e1;
-    }
-    .control-val {
-      color: var(--accent);
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
-    }
     input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
       width: 100%;
-      accent-color: var(--accent);
-      cursor: pointer;
       height: 5px;
-      background: #0f172a;
-      border-radius: 4px;
+      background: #1d2d4e;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
     }
 
-    .toggles {
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--c-cyan);
+      border: 2px solid #050a15;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.16);
+    }
+
+    .playback-row {
+      display: grid;
+      grid-template-columns: 1.05fr 0.9fr auto;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .ctrl-btn {
+      min-height: 34px;
+      padding: 0 9px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-dim);
+      background: #0b1326;
+      color: var(--text-primary);
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .ctrl-btn:hover {
+      border-color: var(--c-cyan);
+      background: #132244;
+    }
+
+    .ctrl-btn.primary {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      border-color: rgba(56, 189, 248, 0.6);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
+    }
+
+    .ctrl-btn.primary:hover {
+      filter: brightness(1.08);
+    }
+
+    .speed-pills {
+      display: inline-flex;
+      background: var(--bg-sub);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .spd-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.69rem;
+      font-weight: 700;
+      padding: 4px 6px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+
+    .spd-btn.active {
+      background: rgba(56, 189, 248, 0.22);
+      color: #ffffff;
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.5);
+    }
+
+    .toggles-group {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      margin: 12px 0;
-      padding-top: 10px;
-      border-top: 1px solid var(--panel-border);
+      gap: 6px;
+      padding-top: 9px;
+      border-top: 1px solid var(--border-dim);
     }
+
     .toggle-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 0.82rem;
+      gap: 8px;
+      font-size: 0.73rem;
       color: #cbd5e1;
       cursor: pointer;
-    }
-    .toggle-row input {
-      accent-color: var(--accent);
-      width: 15px;
-      height: 15px;
-      cursor: pointer;
+      user-select: none;
     }
 
-    .playback-bar {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .btn {
-      flex: 1;
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: none;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-    .btn:hover { opacity: 0.9; }
-    .btn-primary {
-      background: var(--accent);
-      color: #0f172a;
-    }
-    .btn-secondary {
-      background: #334155;
-      color: #f1f5f9;
+    .vec-tag {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 5px;
     }
 
-    .derived-box {
-      margin-top: 12px;
-      background: #0f172a;
-      border: 1px solid var(--panel-border);
-      border-radius: 8px;
-      padding: 10px;
+    .switch-pill {
+      position: relative;
+      width: 34px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .switch-pill input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .switch-track {
+      position: absolute;
+      inset: 0;
+      background: #1d2d4e;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 999px;
+      transition: 0.2s;
+    }
+
+    .switch-track::after {
+      content: "";
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      left: 2px;
+      top: 2px;
+      border-radius: 50%;
+      background: #94a3b8;
+      transition: 0.2s;
+    }
+
+    .switch-pill input:checked + .switch-track {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: var(--c-cyan);
+    }
+
+    .switch-pill input:checked + .switch-track::after {
+      transform: translateX(16px);
+      background: var(--c-cyan);
+    }
+
+    /* 物理推导与实时遥测面板 */
+    .derived-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      font-size: 0.78rem;
-    }
-    .derived-item span {
-      display: block;
-      color: var(--muted);
-    }
-    .derived-item strong {
-      color: #f8fafc;
-      font-size: 0.88rem;
-      font-variant-numeric: tabular-nums;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
     }
 
-    /* Right side visualizations */
-    .viz-column {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
+    .metric-cell {
+      background: var(--bg-sub);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-sm);
+      padding: 6px 8px;
     }
-    .canvas-wrap {
+
+    .metric-k {
+      font-size: 0.64rem;
+      color: var(--text-secondary);
+    }
+
+    .metric-v {
+      font-size: 0.83rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-top: 1px;
+    }
+
+    .metric-sub {
+      font-size: 0.61rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* ==========================================================================
+       5. 双层 WebGL + Canvas 2D 主视口与底部三联遥测图表
+       ========================================================================== */
+    .viewport-stack {
       position: relative;
       width: 100%;
+      height: 315px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-dim);
+      background: #040914;
     }
-    canvas {
-      display: block;
+
+    @media (max-width: 760px) {
+      .viewport-stack {
+        height: 265px;
+      }
+    }
+
+    .viewport-stack canvas {
+      position: absolute;
+      inset: 0;
       width: 100%;
-      border-radius: 8px;
-      background: #0b1324;
+      height: 100%;
+      display: block;
     }
+
+    #glWaterCanvas {
+      z-index: 1;
+    }
+
     #simCanvas {
-      height: 230px;
+      z-index: 2;
+      pointer-events: auto;
+      cursor: pointer;
     }
-    .charts-grid {
+
+    .hud-cam-pill {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      z-index: 5;
+      background: rgba(5, 10, 21, 0.82);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: #f8fafc;
+      font-size: 0.71rem;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.16s ease;
+    }
+
+    .hud-cam-pill:hover {
+      background: rgba(14, 165, 233, 0.25);
+      border-color: var(--c-cyan);
+    }
+
+    .legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.69rem;
+      color: var(--text-secondary);
+    }
+
+    .leg-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .leg-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* 底部三联同步遥测图表 */
+    .charts-triple-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
     }
-    @media (max-width: 650px) {
-      .charts-grid {
+
+    @media (max-width: 1280px) {
+      .charts-triple-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 720px) {
+      .charts-triple-grid {
         grid-template-columns: 1fr;
       }
     }
+
+    .chart-shell {
+      position: relative;
+      width: 100%;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-dim);
+      background: #050a15;
+    }
+
     .chart-canvas {
-      height: 210px;
+      display: block;
+      width: 100%;
+      height: 220px;
+      cursor: ew-resize;
+      touch-action: none;
     }
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      font-size: 0.76rem;
-      color: var(--muted);
+
+    .tab-pills {
+      display: inline-flex;
+      background: var(--bg-sub);
+      border: 1px solid var(--border-dim);
+      border-radius: 7px;
+      padding: 2px;
+      gap: 2px;
     }
-    .legend-item {
+
+    .tab-pill {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+
+    .tab-pill.active {
+      background: rgba(245, 158, 11, 0.22);
+      color: #ffffff;
+      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.5);
+    }
+
+    .chart-foot {
+      margin-top: 6px;
+      font-size: 0.66rem;
+      color: var(--text-secondary);
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 5px;
-    }
-    .dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      display: inline-block;
+      gap: 6px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div class="title-block">
-        <h1>🚤 汽艇线性水阻力减速模拟 <span class="badge">习题 2-7 交互实验室</span></h1>
-        <div class="problem-text">
-          一质量为 <i>m</i> 的汽艇在湖水中以速率 <i>v</i><sub>0</sub> 直线运动，关闭发动机后受水阻力 <i>F</i><sub>f</sub> = −<i>kv</i>，观察速度与位移的指数规律。
+
+  <!-- 顶部海洋动力学实验室导航栏 -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M2 14 L18 14 L22 10 L5 10 Z" fill="#38bdf8" />
+            <path d="M8 10 L14 10 L11.5 6.5 L8 6.5 Z" fill="#f8fafc" />
+            <path d="M2 18 Q 7 15.5, 12 18 T 22 18" stroke="#10b981" stroke-width="1.8" fill="none" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            <span>物理实验模拟 2-7：汽艇受线性水阻力的减速运动</span>
+            <span class="lab-badge">WebGL GLSL 流体光影 · 双镜头跟拍实验室</span>
+          </div>
+          <div class="brand-sub">
+            质量为 <i class="math-i">m</i> 的汽艇以速率 <i class="math-i">v</i><sub>0</sub> 直线航行，关闭发动机后受线性水阻力 <i class="math-i">F</i><sub>f</sub> = &minus;<i class="math-i">kv</i>，探究速度指数衰减与有限极限滑行距离
+          </div>
         </div>
       </div>
-      <div class="formula-pills">
-        <div class="pill"><span>速度</span><i>v</i>(<i>t</i>) = <i>v</i><sub>0</sub><i>e</i><sup>−<i>βt</i></sup></div>
-        <div class="pill"><span>位移</span><i>x</i>(<i>t</i>) = (<i>v</i><sub>0</sub>/<i>β</i>)(1 − <i>e</i><sup>−<i>βt</i></sup>)</div>
-        <div class="pill"><span>特征参数</span><i>β</i> = <i>k</i>/<i>m</i>, <i>τ</i> = 1/<i>β</i></div>
+
+      <div class="header-formulas">
+        <div class="hf-pill highlight">
+          <div class="hf-label">速度指数衰减</div>
+          <div class="hf-math"><i class="math-i">v</i>(<i class="math-i">t</i>) = <i class="math-i">v</i><sub>0</sub><i class="math-i">e</i><sup>&minus;<i class="math-i">&beta;t</i></sup></div>
+        </div>
+        <div class="hf-pill">
+          <div class="hf-label">位移渐近收敛</div>
+          <div class="hf-math"><i class="math-i">x</i>(<i class="math-i">t</i>) = <span class="frac"><span><i class="math-i">v</i><sub>0</sub></span><span><i class="math-i">&beta;</i></span></span>(1 &minus; <i class="math-i">e</i><sup>&minus;<i class="math-i">&beta;t</i></sup>)</div>
+        </div>
+        <div class="hf-pill">
+          <div class="hf-label">特征弛豫参数</div>
+          <div class="hf-math"><i class="math-i">&beta;</i> = <span class="frac"><span><i class="math-i">k</i></span><span><i class="math-i">m</i></span></span>, &nbsp;<i class="math-i">&tau;</i> = <span class="frac"><span>1</span><span><i class="math-i">&beta;</i></span></span></div>
+        </div>
+        <div class="hf-pill">
+          <div class="hf-label">相空间线性律</div>
+          <div class="hf-math"><i class="math-i">v</i>(<i class="math-i">x</i>) = <i class="math-i">v</i><sub>0</sub> &minus; <i class="math-i">&beta;x</i></div>
+        </div>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <div class="main-grid">
-      <!-- Left Control Panel -->
-      <aside class="card">
-        <div class="card-title">实验参数与工况预设</div>
-        <div class="preset-group">
-          <button class="preset-btn active" data-preset="standard">标准模式</button>
-          <button class="preset-btn" data-preset="damped">大阻尼模式</button>
-          <button class="preset-btn" data-preset="inertia">高惯性模式</button>
-        </div>
-
-        <div class="control-item">
-          <div class="control-header">
-            <label for="massSlider">汽艇质量 <i>m</i></label>
-            <span class="control-val" id="massVal">500 kg</span>
-          </div>
-          <input type="range" id="massSlider" min="100" max="2000" step="50" value="500" />
-        </div>
-
-        <div class="control-item">
-          <div class="control-header">
-            <label for="kSlider">阻力系数 <i>k</i></label>
-            <span class="control-val" id="kVal">100 N·s/m</span>
-          </div>
-          <input type="range" id="kSlider" min="20" max="300" step="5" value="100" />
-        </div>
-
-        <div class="control-item">
-          <div class="control-header">
-            <label for="v0Slider">关闭引擎时初速度 <i>v</i><sub>0</sub></label>
-            <span class="control-val" id="v0Val">20 m/s</span>
-          </div>
-          <input type="range" id="v0Slider" min="5" max="40" step="1" value="20" />
-        </div>
-
-        <div class="control-item">
-          <div class="control-header">
-            <label for="timeSlider">时间轴手动拖动 <i>t</i></label>
-            <span class="control-val" id="timeVal">0.00 s</span>
-          </div>
-          <input type="range" id="timeSlider" min="0" max="25" step="0.05" value="0" />
-        </div>
-
-        <div class="toggles">
-          <label class="toggle-row">
-            <span>显示无阻力对照艇 (<i>F</i><sub>f</sub> = 0)</span>
-            <input type="checkbox" id="ghostToggle" checked />
-          </label>
-          <label class="toggle-row">
-            <span>显示速度与水阻力矢量箭头</span>
-            <input type="checkbox" id="vectorToggle" checked />
-          </label>
-        </div>
-
-        <div class="playback-bar">
-          <button class="btn btn-primary" id="playPauseBtn">暂停</button>
-          <button class="btn btn-secondary" id="resetBtn">重置 <i>t</i>=0</button>
-        </div>
-
-        <div class="derived-box">
-          <div class="derived-item">
-            <span>衰减系数 <i>β</i> = <i>k</i>/<i>m</i></span>
-            <strong id="betaOut">0.200 s⁻¹</strong>
-          </div>
-          <div class="derived-item">
-            <span>特征时间 <i>τ</i> = <i>m</i>/<i>k</i></span>
-            <strong id="tauOut">5.00 s</strong>
-          </div>
-          <div class="derived-item">
-            <span>极限距离 <i>x</i><sub>max</sub> = <i>mv</i><sub>0</sub>/<i>k</i></span>
-            <strong id="xmaxOut" style="color:#f87171;">100.0 m</strong>
-          </div>
-          <div class="derived-item">
-            <span>当前瞬时阻力 |<i>F</i><sub>f</sub>|</span>
-            <strong id="forceOut" style="color:#fb923c;">2000 N</strong>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Right Visualization Panel -->
-      <main class="viz-column">
-        <div class="card">
+  <!-- 主工作台 -->
+  <div class="workspace-shell">
+    <!-- 左侧：参数控制与实时解析遥测 -->
+    <aside class="sidebar-col">
+      <section class="card">
+        <div class="card-head">
           <div class="card-title">
-            <span>湖面运动实景与矢量演示</span>
-            <div class="legend">
-              <span class="legend-item"><i class="dot" style="background:var(--green)"></i>速度矢量 <i>v</i>(<i>t</i>)</span>
-              <span class="legend-item"><i class="dot" style="background:var(--orange)"></i>水阻力 <i>F</i><sub>f</sub> = −<i>kv</i></span>
-              <span class="legend-item"><i class="dot" style="background:var(--red)"></i>极限停靠线 <i>x</i><sub>max</sub></span>
+            <span class="led-dot"></span>
+            <span>实验工况预设与动力学参数</span>
+          </div>
+          <span class="mono" style="font-size:0.69rem;color:var(--c-cyan);" id="renderModeBadge">WebGL GLSL</span>
+        </div>
+
+        <!-- 4 个典型工况预设 -->
+        <div class="preset-grid" id="presetContainer"></div>
+
+        <!-- 4 个连续可调滑块 -->
+        <div class="sliders-stack">
+          <div class="slider-pair">
+            <div class="slider-card">
+              <div class="slider-top">
+                <label class="slider-label" for="massSlider">汽艇质量 <i class="math-i">m</i></label>
+                <span class="slider-badge mono" id="massVal">500 kg</span>
+              </div>
+              <input type="range" id="massSlider" min="100" max="2000" step="25" value="500" />
+            </div>
+            <div class="slider-card">
+              <div class="slider-top">
+                <label class="slider-label" for="kSlider">阻力系数 <i class="math-i">k</i></label>
+                <span class="slider-badge mono" id="kVal">100 N&middot;s/m</span>
+              </div>
+              <input type="range" id="kSlider" min="20" max="300" step="5" value="100" />
             </div>
           </div>
-          <div class="canvas-wrap">
-            <canvas id="simCanvas"></canvas>
+
+          <div class="slider-pair">
+            <div class="slider-card">
+              <div class="slider-top">
+                <label class="slider-label" for="v0Slider">关机初速 <i class="math-i">v</i><sub>0</sub></label>
+                <span class="slider-badge mono" id="v0Val">20.0 m/s</span>
+              </div>
+              <input type="range" id="v0Slider" min="5" max="45" step="0.5" value="20" />
+            </div>
+            <div class="slider-card">
+              <div class="slider-top">
+                <label class="slider-label" for="timeSlider">时间轴 <i class="math-i">t</i></label>
+                <span class="slider-badge mono" id="timeVal">0.00 s</span>
+              </div>
+              <input type="range" id="timeSlider" min="0" max="25" step="0.02" value="0" />
+            </div>
           </div>
         </div>
 
-        <div class="charts-grid">
-          <div class="card">
+        <!-- 播放 / 重置 / 倍速胶囊 -->
+        <div class="playback-row">
+          <button type="button" class="ctrl-btn primary" id="playPauseBtn">
+            <span id="playIcon">❚❚</span>
+            <span id="playText">暂停</span>
+          </button>
+          <button type="button" class="ctrl-btn" id="resetBtn">
+            <span>↺</span>
+            <span>重置 <i class="math-i">t</i>=0</span>
+          </button>
+          <div class="speed-pills" role="group" aria-label="播放倍速">
+            <button type="button" class="spd-btn" data-spd="0.5">0.5&times;</button>
+            <button type="button" class="spd-btn active" data-spd="1.0">1.0&times;</button>
+            <button type="button" class="spd-btn" data-spd="2.0">2.0&times;</button>
+          </div>
+        </div>
+
+        <!-- 4 个视觉与相机开关 -->
+        <div class="toggles-group">
+          <label class="toggle-row">
+            <span><i class="vec-tag" style="background:#38bdf8;"></i>无阻力参照艇 (<i class="math-i">F</i><sub>f</sub> = 0, 匀速 <i class="math-i">v</i><sub>0</sub>)</span>
+            <span class="switch-pill"><input type="checkbox" id="ghostToggle" checked /><span class="switch-track"></span></span>
+          </label>
+          <label class="toggle-row">
+            <span><i class="vec-tag" style="background:#10b981;"></i>实时速度 <i class="math-i">v</i>(<i class="math-i">t</i>) 与水阻力 <i class="math-i">F</i><sub>f</sub> 矢量箭头</span>
+            <span class="switch-pill"><input type="checkbox" id="vectorToggle" checked /><span class="switch-track"></span></span>
+          </label>
+          <label class="toggle-row">
+            <span><i class="vec-tag" style="background:#f59e0b;"></i>开尔文尾迹波 (&plusmn;19.47&deg;) 与浪花粒子</span>
+            <span class="switch-pill"><input type="checkbox" id="wakeToggle" checked /><span class="switch-track"></span></span>
+          </label>
+          <label class="toggle-row">
+            <span><i class="vec-tag" style="background:#a855f7;"></i>智能跟拍特写镜头 (Chase Cam)</span>
+            <span class="switch-pill"><input type="checkbox" id="chaseToggle" /><span class="switch-track"></span></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- 实时衍生物理量遥测卡片 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="led-dot" style="background:var(--c-emerald);box-shadow:0 0 8px var(--c-emerald);"></span>
+            <span>实时动力学与能量耗散遥测</span>
+          </div>
+          <span class="mono" style="font-size:0.68rem;color:var(--c-purple);" id="tauProgressBadge">t / &tau; = 0.00</span>
+        </div>
+
+        <div class="derived-grid">
+          <div class="metric-cell">
+            <div class="metric-k">阻尼率 <i class="math-i">&beta;</i> = <i class="math-i">k</i> / <i class="math-i">m</i></div>
+            <div class="metric-v mono" style="color:var(--c-cyan);" id="betaOut">0.200 s<sup>&minus;1</sup></div>
+            <div class="metric-sub mono">速度衰减半衰期 t<sub>1/2</sub> = <span id="halfLifeOut">3.47 s</span></div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-k">特征弛豫时间 <i class="math-i">&tau;</i> = <i class="math-i">m</i> / <i class="math-i">k</i></div>
+            <div class="metric-v mono" style="color:var(--c-purple);" id="tauOut">5.00 s</div>
+            <div class="metric-sub mono">里程碑位置 x(&tau;) = <span id="xTauOut">63.2 m</span></div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-k">极限滑行距离 <i class="math-i">x</i><sub>max</sub> = <i class="math-i">mv</i><sub>0</sub>/<i class="math-i">k</i></div>
+            <div class="metric-v mono" style="color:var(--c-coral);" id="xmaxOut">100.0 m</div>
+            <div class="metric-sub mono">当前已滑行 <span id="xPctOut">0.0%</span> (<span id="xCurOut">0.0 m</span>)</div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-k">瞬时速度 <i class="math-i">v</i>(<i class="math-i">t</i>) &amp; 水阻力 |<i class="math-i">F</i><sub>f</sub>|</div>
+            <div class="metric-v mono" style="color:var(--c-emerald);" id="velOut">20.00 m/s</div>
+            <div class="metric-sub mono" style="color:var(--c-coral);">|<i class="math-i">F</i><sub>f</sub>| = <span id="forceOut">2000 N</span></div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-k">剩余动能 <i class="math-i">E</i><sub>k</sub>(<i class="math-i">t</i>) = &frac12;<i class="math-i">mv</i>&sup2;</div>
+            <div class="metric-v mono" style="color:var(--c-amber);" id="ekOut">100.0 kJ</div>
+            <div class="metric-sub mono">初始动能 E<sub>k0</sub> = <span id="ek0Out">100.0 kJ</span></div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-k">水体耗散能量 <i class="math-i">Q</i>(<i class="math-i">t</i>) = <i class="math-i">E</i><sub>k0</sub> &minus; <i class="math-i">E</i><sub>k</sub></div>
+            <div class="metric-v mono" style="color:#f472b6;" id="qOut">0.0 kJ</div>
+            <div class="metric-sub mono">耗散比例 <span id="qPctOut">0.0%</span> (转化为涡流热)</div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 右侧主舞台：WebGL+Canvas2D 双层湖面实景 + 底部三联同步图表 -->
+    <main class="main-stage-col">
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="led-dot"></span>
+            <span>暮光高山湖泊流体实景与矢量动力学演示</span>
+          </div>
+          <div class="legend-bar">
+            <span class="leg-item"><i class="leg-dot" style="background:var(--c-emerald);"></i>速度 <i class="math-i">v</i>(<i class="math-i">t</i>)</span>
+            <span class="leg-item"><i class="leg-dot" style="background:var(--c-coral);"></i>线性水阻力 <i class="math-i">F</i><sub>f</sub> = &minus;<i class="math-i">kv</i></span>
+            <span class="leg-item"><i class="leg-dot" style="background:var(--c-purple);"></i><i class="math-i">&tau;</i> 浮标 (63.2% <i class="math-i">x</i><sub>max</sub>)</span>
+            <span class="leg-item"><i class="leg-dot" style="background:#ef4444;"></i>极限停靠线 <i class="math-i">x</i><sub>max</sub></span>
+          </div>
+        </div>
+
+        <div class="viewport-stack">
+          <canvas id="glWaterCanvas"></canvas>
+          <canvas id="simCanvas"></canvas>
+          <button type="button" class="hud-cam-pill" id="hudCamBtn" title="切换全景航道与智能跟拍特写镜头">
+            <span id="hudCamIcon">🎥</span>
+            <span id="hudCamLabel">镜头：全景航道视野</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 底部三联同步可交互图表 (支持直接点击或水平拖动擦洗时间轴 t) -->
+      <section class="charts-triple-grid">
+        <!-- Chart 1: 速度-时间曲线 v(t) -->
+        <div class="card">
+          <div class="card-head">
             <div class="card-title">
-              <span>速度-时间曲线 <i>v</i>(<i>t</i>)</span>
-              <span style="font-size:0.75rem;color:var(--muted);"><i>t</i>=<i>τ</i> 时衰减至 36.8%</span>
+              <span class="led-dot" style="background:var(--c-emerald);box-shadow:0 0 8px var(--c-emerald);"></span>
+              <span>速度-时间曲线 <i class="math-i">v</i>(<i class="math-i">t</i>)</span>
             </div>
+            <span class="mono" style="font-size:0.67rem;color:var(--c-purple);">t=&tau; 衰减至 36.8%</span>
+          </div>
+          <div class="chart-shell">
             <canvas id="vChart" class="chart-canvas"></canvas>
           </div>
-          <div class="card">
-            <div class="card-title">
-              <span>位移-时间曲线 <i>x</i>(<i>t</i>)</span>
-              <span style="font-size:0.75rem;color:var(--muted);"><i>t</i>=<i>τ</i> 时完成 63.2%</span>
-            </div>
-            <canvas id="xChart" class="chart-canvas"></canvas>
+          <div class="chart-foot">
+            <span>绿线 <i class="math-i">v</i><sub>0</sub><i class="math-i">e</i><sup>&minus;&beta;t</sup> · 青虚线无阻力匀速 <i class="math-i">v</i><sub>0</sub></span>
+            <span class="mono" style="color:var(--c-emerald);">可拖动擦洗时间 t</span>
           </div>
         </div>
-      </main>
-    </div>
+
+        <!-- Chart 2: 位移-时间曲线 x(t) -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="led-dot" style="background:var(--c-cyan);box-shadow:0 0 8px var(--c-cyan);"></span>
+              <span>位移-时间曲线 <i class="math-i">x</i>(<i class="math-i">t</i>)</span>
+            </div>
+            <span class="mono" style="font-size:0.67rem;color:var(--c-purple);">t=&tau; 完成 63.2%</span>
+          </div>
+          <div class="chart-shell">
+            <canvas id="xChart" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-foot">
+            <span>青线渐近收敛于红虚线 <i class="math-i">x</i><sub>max</sub> = <i class="math-i">v</i><sub>0</sub>/<i class="math-i">&beta;</i></span>
+            <span class="mono" style="color:var(--c-cyan);">斜率 <i class="math-i">dx/dt</i> = <i class="math-i">v</i>(<i class="math-i">t</i>)</span>
+          </div>
+        </div>
+
+        <!-- Chart 3: 双模式切换图表 [相空间 v(x)] & [动能耗散 Ek(t)] -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="led-dot" style="background:var(--c-amber);box-shadow:0 0 8px var(--c-amber);"></span>
+              <span id="chart3Title">相空间轨迹 <i class="math-i">v</i>(<i class="math-i">x</i>)</span>
+            </div>
+            <div class="tab-pills" role="tablist">
+              <button type="button" class="tab-pill active" data-c3mode="phase">相空间 v(x)</button>
+              <button type="button" class="tab-pill" data-c3mode="energy">动能耗散 Ek(t)</button>
+            </div>
+          </div>
+          <div class="chart-shell">
+            <canvas id="thirdChart" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-foot">
+            <span id="chart3FootLeft">严格直线 <i class="math-i">v</i>(<i class="math-i">x</i>) = <i class="math-i">v</i><sub>0</sub> &minus; <i class="math-i">&beta;x</i>，斜率 &minus;<i class="math-i">k/m</i></span>
+            <span class="mono" style="color:var(--c-amber);" id="chart3FootRight">终点 (x_max, 0)</span>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 
   <script>
-    const state = {
-      m: 500,
-      k: 100,
-      v0: 20,
-      t: 0,
-      playing: true,
-      showGhost: true,
-      showVectors: true,
-      lastTimestamp: null
-    };
+    /**
+     * ============================================================================
+     * 物理实验模拟 2-7：汽艇受线性水阻力的减速运动（WebGL 电影级实验室）
+     * 核心架构：
+     *   1. 严格解析物理内核：
+     *      β = k / m, τ = m / k, x_max = v0 / β
+     *      v(t) = v0 * exp(-β t), x(t) = x_max * (1 - exp(-β t))
+     *      E_k(t) = 0.5 * m * v(t)^2, Q(t) = E_k0 - E_k(t)
+     *      v(x) = v0 - β x
+     *   2. 底层 WebGL GLSL 片元着色器 (glWaterCanvas)：
+     *      暮光星空、视差远山剪影、月光/极光水面镜面反射路径、多层动态水波、
+     *      青碧色水下散射与焦散光网 (caustics) + 自动 Canvas 2D 降级保护。
+     *   3. 顶层 Retina Canvas 2D 物理叠加层 (simCanvas)：
+     *      全景航道 / 临界阻尼弹簧智能跟拍双镜头、金属质感汽艇与水波扭曲倒影、
+     *      滑行纵倾俯仰角 (planing trim) 与阻尼浮力微颤、t=0 关机冲击波环、
+     *      重力驱动船首浪花飞沫与涟漪粒子系统、±19.47° 开尔文尾迹波。
+     * ============================================================================
+     */
+    (function () {
+      'use strict';
 
-    const presets = {
-      standard: { m: 500, k: 100, v0: 20 },
-      damped:   { m: 200, k: 220, v0: 20 },
-      inertia:  { m: 1500, k: 60, v0: 20 }
-    };
+      const TWO_PI = Math.PI * 2.0;
+      const DEG2RAD = Math.PI / 180.0;
+      const GRAVITY = 9.8;
 
-    // DOM elements
-    const massSlider = document.getElementById('massSlider');
-    const kSlider = document.getElementById('kSlider');
-    const v0Slider = document.getElementById('v0Slider');
-    const timeSlider = document.getElementById('timeSlider');
-    const ghostToggle = document.getElementById('ghostToggle');
-    const vectorToggle = document.getElementById('vectorToggle');
-    const playPauseBtn = document.getElementById('playPauseBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const presetBtns = document.querySelectorAll('.preset-btn');
+      const PRESETS = [
+        { id: 'standard', name: '标准模式', sub: 'm=500kg · k=100 · v₀=20m/s', m: 500, k: 100, v0: 20 },
+        { id: 'damped',   name: '大阻尼急停', sub: 'm=200kg · k=220 · τ=0.91s', m: 200, k: 220, v0: 20 },
+        { id: 'inertia',  name: '高惯性滑行', sub: 'm=1500kg · k=60 · x_max=500m', m: 1500, k: 60, v0: 20 },
+        { id: 'hydrofoil', name: '超高速水翼艇', sub: 'm=400kg · k=85 · v₀=38m/s', m: 400, k: 85, v0: 38 }
+      ];
 
-    const massVal = document.getElementById('massVal');
-    const kVal = document.getElementById('kVal');
-    const v0Val = document.getElementById('v0Val');
-    const timeVal = document.getElementById('timeVal');
-    const betaOut = document.getElementById('betaOut');
-    const tauOut = document.getElementById('tauOut');
-    const xmaxOut = document.getElementById('xmaxOut');
-    const forceOut = document.getElementById('forceOut');
+      // ==========================================================================
+      // 1. 实验状态与粒子/相机动力学状态
+      // ==========================================================================
+      const state = {
+        preset: 'standard',
+        m: 500,
+        k: 100,
+        v0: 20,
+        t: 0.0,
+        playing: true,
+        speedMult: 1.0,
+        lastTimestamp: null,
+        wallClock: 0.0,
 
-    const simCanvas = document.getElementById('simCanvas');
-    const vChart = document.getElementById('vChart');
-    const xChart = document.getElementById('xChart');
+        // 显示图层开关
+        showGhost: true,
+        showVectors: true,
+        showWake: true,
+        chaseCam: false,
+        chart3Mode: 'phase', // 'phase' | 'energy'
 
-    function getPhysics(t) {
-      const beta = state.k / state.m;
-      const tau = state.m / state.k;
-      const xmax = state.v0 / beta;
-      const expFactor = Math.exp(-beta * t);
-      const v = state.v0 * expFactor;
-      const x = xmax * (1 - expFactor);
-      const force = state.k * v;
-      const ghostX = state.v0 * t;
-      return { beta, tau, xmax, v, x, force, ghostX };
-    }
+        // 临界阻尼弹簧跟拍镜头状态 (世界坐标 x, m)
+        camCenterX: 50.0,
+        camVelX: 0.0,
 
-    function getMaxTime() {
-      const tau = state.m / state.k;
-      return Math.min(60, Math.max(12, Math.ceil(tau * 4.5)));
-    }
+        // 流体粒子系统 (船首飞沫水滴、扩散水面涟漪、船尾空化泡沫)
+        droplets: [],
+        ripples: [],
+        foamBubbles: [],
+        sprayAccumulator: 0.0,
+        foamAccumulator: 0.0
+      };
 
-    function syncUI() {
-      massVal.textContent = `${state.m} kg`;
-      kVal.textContent = `${state.k} N·s/m`;
-      v0Val.textContent = `${state.v0} m/s`;
-
-      const maxT = getMaxTime();
-      timeSlider.max = maxT;
-      if (state.t > maxT) state.t = maxT;
-      timeSlider.value = state.t;
-      timeVal.textContent = `${state.t.toFixed(2)} s`;
-
-      const p = getPhysics(state.t);
-      betaOut.textContent = `${p.beta.toFixed(3)} s⁻¹`;
-      tauOut.textContent = `${p.tau.toFixed(2)} s`;
-      xmaxOut.textContent = `${p.xmax.toFixed(1)} m`;
-      forceOut.textContent = `${p.force.toFixed(0)} N`;
-    }
-
-    function applyPreset(name) {
-      const cfg = presets[name];
-      if (!cfg) return;
-      state.m = cfg.m;
-      state.k = cfg.k;
-      state.v0 = cfg.v0;
-      massSlider.value = cfg.m;
-      kSlider.value = cfg.k;
-      v0Slider.value = cfg.v0;
-      state.t = 0;
-      state.playing = true;
-      playPauseBtn.textContent = '暂停';
-
-      presetBtns.forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.preset === name);
-      });
-      syncUI();
-    }
-
-    function clearPresetHighlight() {
-      presetBtns.forEach(btn => btn.classList.remove('active'));
-    }
-
-    presetBtns.forEach(btn => {
-      btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
-    });
-
-    massSlider.addEventListener('input', e => {
-      state.m = Number(e.target.value);
-      clearPresetHighlight();
-      syncUI();
-    });
-    kSlider.addEventListener('input', e => {
-      state.k = Number(e.target.value);
-      clearPresetHighlight();
-      syncUI();
-    });
-    v0Slider.addEventListener('input', e => {
-      state.v0 = Number(e.target.value);
-      clearPresetHighlight();
-      syncUI();
-    });
-    timeSlider.addEventListener('input', e => {
-      state.t = Number(e.target.value);
-      state.playing = false;
-      playPauseBtn.textContent = '继续';
-      syncUI();
-    });
-    ghostToggle.addEventListener('change', e => {
-      state.showGhost = e.target.checked;
-    });
-    vectorToggle.addEventListener('change', e => {
-      state.showVectors = e.target.checked;
-    });
-    playPauseBtn.addEventListener('click', () => {
-      if (state.t >= getMaxTime() - 0.05) {
-        state.t = 0;
-      }
-      state.playing = !state.playing;
-      playPauseBtn.textContent = state.playing ? '暂停' : '继续';
-    });
-    resetBtn.addEventListener('click', () => {
-      state.t = 0;
-      state.playing = true;
-      playPauseBtn.textContent = '暂停';
-      syncUI();
-    });
-
-    function setupCanvas(canvas) {
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
-        canvas.width = Math.round(rect.width * dpr);
-        canvas.height = Math.round(rect.height * dpr);
-      }
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return { ctx, w: rect.width, h: rect.height };
-    }
-
-    function drawArrow(ctx, x1, y1, x2, y2, color, label) {
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const len = Math.hypot(dx, dy);
-      if (len < 4) return;
-      const angle = Math.atan2(dy, dx);
-      const head = Math.min(10, len * 0.35);
-
-      ctx.save();
-      ctx.strokeStyle = color;
-      ctx.fillStyle = color;
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(x2, y2);
-      ctx.lineTo(x2 - head * Math.cos(angle - Math.PI / 6), y2 - head * Math.sin(angle - Math.PI / 6));
-      ctx.lineTo(x2 - head * Math.cos(angle + Math.PI / 6), y2 - head * Math.sin(angle + Math.PI / 6));
-      ctx.closePath();
-      ctx.fill();
-
-      if (label) {
-        ctx.font = 'bold 12px sans-serif';
-        ctx.textAlign = dx >= 0 ? 'left' : 'right';
-        ctx.fillText(label, x2 + (dx >= 0 ? 6 : -6), y2 + 4);
-      }
-      ctx.restore();
-    }
-
-    function drawBoat(ctx, cx, cy, isGhost) {
-      ctx.save();
-      ctx.translate(cx, cy);
-      if (isGhost) {
-        ctx.globalAlpha = 0.32;
-      }
-      // Hull
-      ctx.fillStyle = isGhost ? '#94a3b8' : '#38bdf8';
-      ctx.beginPath();
-      ctx.moveTo(-24, 0);
-      ctx.lineTo(18, 0);
-      ctx.lineTo(28, -9);
-      ctx.lineTo(-22, -9);
-      ctx.closePath();
-      ctx.fill();
-
-      // Cabin
-      ctx.fillStyle = isGhost ? '#cbd5e1' : '#f8fafc';
-      ctx.beginPath();
-      ctx.moveTo(-10, -9);
-      ctx.lineTo(8, -9);
-      ctx.lineTo(2, -17);
-      ctx.lineTo(-10, -17);
-      ctx.closePath();
-      ctx.fill();
-
-      // Engine block
-      ctx.fillStyle = isGhost ? '#64748b' : '#334155';
-      ctx.fillRect(-27, -11, 5, 11);
-      ctx.restore();
-    }
-
-    function drawSimulation() {
-      const { ctx, w, h } = setupCanvas(simCanvas);
-      const p = getPhysics(state.t);
-
-      // Sky & Water background
-      ctx.fillStyle = '#0b1324';
-      ctx.fillRect(0, 0, w, h);
-
-      const waterY = h * 0.62;
-      const waterGrad = ctx.createLinearGradient(0, waterY, 0, h);
-      waterGrad.addColorStop(0, '#0c4a6e');
-      waterGrad.addColorStop(1, '#082f49');
-      ctx.fillStyle = waterGrad;
-      ctx.fillRect(0, waterY, w, h - waterY);
-
-      // Water surface ripples
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      for (let sx = 0; sx <= w; sx += 8) {
-        const wy = waterY + Math.sin(sx * 0.04 + state.t * 3) * 2;
-        if (sx === 0) ctx.moveTo(sx, wy);
-        else ctx.lineTo(sx, wy);
-      }
-      ctx.stroke();
-
-      // World scale: map [0, xmax * 1.18] onto [leftPad, rightPad]
-      const leftPad = 56;
-      const rightPad = w - 48;
-      const viewMaxX = Math.max(10, p.xmax * 1.18);
-      const toScreenX = (worldX) => leftPad + (worldX / viewMaxX) * (rightPad - leftPad);
-
-      // Ruler ticks
-      const rawStep = viewMaxX / 6;
-      const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
-      const step = Math.ceil(rawStep / mag) * mag;
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '11px sans-serif';
-      ctx.textAlign = 'center';
-      for (let dist = 0; dist <= viewMaxX; dist += step) {
-        const sx = toScreenX(dist);
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
-        ctx.beginPath();
-        ctx.moveTo(sx, waterY);
-        ctx.lineTo(sx, waterY + 8);
-        ctx.stroke();
-        ctx.fillText(`${Math.round(dist)}m`, sx, waterY + 22);
+      // ==========================================================================
+      // 2. 严格解析物理计算引擎
+      // ==========================================================================
+      function getPhysics(t = state.t) {
+        const beta = state.k / state.m;
+        const tau = state.m / state.k;
+        const xmax = state.v0 / beta;
+        const expFactor = Math.exp(-beta * t);
+        const v = state.v0 * expFactor;
+        const x = xmax * (1.0 - expFactor);
+        const force = state.k * v;
+        const ek0 = 0.5 * state.m * state.v0 * state.v0;
+        const ek = ek0 * expFactor * expFactor;
+        const qDissipated = ek0 - ek;
+        const power = force * v; // 瞬时水阻力耗散功率 P = k * v^2
+        const ghostX = state.v0 * t;
+        const halfLife = Math.LN2 / beta;
+        const xTau = xmax * (1.0 - Math.exp(-1.0));
+        return {
+          beta,
+          tau,
+          xmax,
+          v,
+          x,
+          force,
+          ek0,
+          ek,
+          qDissipated,
+          power,
+          ghostX,
+          halfLife,
+          xTau
+        };
       }
 
-      // Limit Buoy Line at xmax
-      const limitX = toScreenX(p.xmax);
-      ctx.save();
-      ctx.strokeStyle = '#ef4444';
-      ctx.setLineDash([5, 4]);
-      ctx.lineWidth = 1.8;
-      ctx.beginPath();
-      ctx.moveTo(limitX, 26);
-      ctx.lineTo(limitX, h - 14);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Floating red buoy
-      ctx.fillStyle = '#ef4444';
-      ctx.beginPath();
-      ctx.arc(limitX, waterY, 6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fca5a5';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`极限距离 x_max = ${p.xmax.toFixed(1)} m`, Math.min(w - 85, Math.max(85, limitX)), 20);
-      ctx.restore();
-
-      // Ghost boat (zero drag)
-      if (state.showGhost) {
-        const gx = toScreenX(p.ghostX);
-        if (gx <= w + 40) {
-          drawBoat(ctx, gx, waterY - 22, true);
-          ctx.fillStyle = 'rgba(148, 163, 184, 0.75)';
-          ctx.font = '11px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('无阻力对照', gx, waterY - 44);
-        }
+      function getMaxTime() {
+        const tau = state.m / state.k;
+        return Math.min(80.0, Math.max(10.0, Math.ceil(tau * 4.6)));
       }
 
-      // Main boat
-      const bx = toScreenX(p.x);
-      // Wake trail proportional to current speed
-      const wakeLen = (p.v / state.v0) * 65;
-      if (wakeLen > 2) {
-        const wakeGrad = ctx.createLinearGradient(bx - 25 - wakeLen, waterY, bx - 25, waterY);
-        wakeGrad.addColorStop(0, 'rgba(255,255,255,0)');
-        wakeGrad.addColorStop(1, 'rgba(224,242,254,0.65)');
-        ctx.strokeStyle = wakeGrad;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(bx - 25 - wakeLen, waterY + 1);
-        ctx.lineTo(bx - 25, waterY + 1);
-        ctx.stroke();
+      // ==========================================================================
+      // 3. DOM 引用与 UI 同步
+      // ==========================================================================
+      const presetContainer = document.getElementById('presetContainer');
+      const massSlider = document.getElementById('massSlider');
+      const kSlider = document.getElementById('kSlider');
+      const v0Slider = document.getElementById('v0Slider');
+      const timeSlider = document.getElementById('timeSlider');
+
+      const massVal = document.getElementById('massVal');
+      const kVal = document.getElementById('kVal');
+      const v0Val = document.getElementById('v0Val');
+      const timeVal = document.getElementById('timeVal');
+
+      const playPauseBtn = document.getElementById('playPauseBtn');
+      const playIcon = document.getElementById('playIcon');
+      const playText = document.getElementById('playText');
+      const resetBtn = document.getElementById('resetBtn');
+      const speedBtns = document.querySelectorAll('.spd-btn');
+
+      const ghostToggle = document.getElementById('ghostToggle');
+      const vectorToggle = document.getElementById('vectorToggle');
+      const wakeToggle = document.getElementById('wakeToggle');
+      const chaseToggle = document.getElementById('chaseToggle');
+
+      const hudCamBtn = document.getElementById('hudCamBtn');
+      const hudCamIcon = document.getElementById('hudCamIcon');
+      const hudCamLabel = document.getElementById('hudCamLabel');
+      const renderModeBadge = document.getElementById('renderModeBadge');
+
+      const betaOut = document.getElementById('betaOut');
+      const halfLifeOut = document.getElementById('halfLifeOut');
+      const tauOut = document.getElementById('tauOut');
+      const xTauOut = document.getElementById('xTauOut');
+      const xmaxOut = document.getElementById('xmaxOut');
+      const xPctOut = document.getElementById('xPctOut');
+      const xCurOut = document.getElementById('xCurOut');
+      const velOut = document.getElementById('velOut');
+      const forceOut = document.getElementById('forceOut');
+      const ekOut = document.getElementById('ekOut');
+      const ek0Out = document.getElementById('ek0Out');
+      const qOut = document.getElementById('qOut');
+      const qPctOut = document.getElementById('qPctOut');
+      const tauProgressBadge = document.getElementById('tauProgressBadge');
+
+      const glWaterCanvas = document.getElementById('glWaterCanvas');
+      const simCanvas = document.getElementById('simCanvas');
+      const vChart = document.getElementById('vChart');
+      const xChart = document.getElementById('xChart');
+      const thirdChart = document.getElementById('thirdChart');
+
+      const chart3Title = document.getElementById('chart3Title');
+      const chart3FootLeft = document.getElementById('chart3FootLeft');
+      const chart3FootRight = document.getElementById('chart3FootRight');
+      const tabPills = document.querySelectorAll('.tab-pill');
+
+      function buildPresetsUI() {
+        presetContainer.innerHTML = PRESETS.map((p) => `
+          <button type="button" class="preset-btn ${state.preset === p.id ? 'active' : ''}" data-preset="${p.id}">
+            <div class="preset-name">${p.name}</div>
+            <div class="preset-sub mono">${p.sub}</div>
+          </button>
+        `).join('');
+
+        presetContainer.querySelectorAll('.preset-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const p = PRESETS.find((item) => item.id === btn.dataset.preset);
+            if (!p) return;
+            state.preset = p.id;
+            state.m = p.m;
+            state.k = p.k;
+            state.v0 = p.v0;
+
+            massSlider.value = String(p.m);
+            kSlider.value = String(p.k);
+            v0Slider.value = String(p.v0);
+
+            resetSimulation();
+            buildPresetsUI();
+          });
+        });
       }
 
-      drawBoat(ctx, bx, waterY + 2, false);
-
-      // Proportional vector arrows
-      if (state.showVectors) {
-        const ratio = p.v / state.v0;
-        const maxArrowPx = 85;
-        const vLen = ratio * maxArrowPx;
-        const fLen = ratio * maxArrowPx; // F_f = -kv scales identically with v!
-
-        drawArrow(ctx, bx + 28, waterY - 8, bx + 28 + vLen, waterY - 8, '#22c55e', `v=${p.v.toFixed(1)}m/s`);
-        drawArrow(ctx, bx - 27, waterY - 8, bx - 27 - fLen, waterY - 8, '#f97316', `Ff=${p.force.toFixed(0)}N`);
+      function setPlaying(playing) {
+        state.playing = playing;
+        playIcon.textContent = playing ? '❚❚' : '▶';
+        playText.textContent = playing ? '暂停' : '继续';
       }
 
-      // HUD readout top-left
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
-      ctx.fillRect(12, 10, 215, 58);
-      ctx.strokeStyle = '#334155';
-      ctx.strokeRect(12, 10, 215, 58);
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = '12px monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(`时间 t = ${state.t.toFixed(2)} s`, 20, 28);
-      ctx.fillText(`速度 v = ${p.v.toFixed(2)} m/s (${((p.v/state.v0)*100).toFixed(1)}%)`, 20, 45);
-      ctx.fillText(`位移 x = ${p.x.toFixed(2)} m (${((p.x/p.xmax)*100).toFixed(1)}%)`, 20, 62);
-    }
-
-    function drawChart(canvas, type) {
-      const { ctx, w, h } = setupCanvas(canvas);
-      const p = getPhysics(state.t);
-      const maxT = getMaxTime();
-      const maxY = type === 'v' ? state.v0 * 1.15 : p.xmax * 1.15;
-
-      const pad = { left: 46, right: 18, top: 18, bottom: 28 };
-      const plotW = w - pad.left - pad.right;
-      const plotH = h - pad.top - pad.bottom;
-
-      const toX = t => pad.left + (t / maxT) * plotW;
-      const toY = val => pad.top + plotH - (val / maxY) * plotH;
-
-      ctx.fillStyle = '#0b1324';
-      ctx.fillRect(0, 0, w, h);
-
-      // Axes
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(pad.left, pad.top);
-      ctx.lineTo(pad.left, pad.top + plotH);
-      ctx.lineTo(pad.left + plotW, pad.top + plotH);
-      ctx.stroke();
-
-      // Axis labels
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '11px sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText('0', pad.left - 6, pad.top + plotH + 4);
-      const topRef = type === 'v' ? state.v0 : p.xmax;
-      ctx.fillText(topRef.toFixed(0), pad.left - 6, toY(topRef) + 4);
-      ctx.textAlign = 'center';
-      ctx.fillText(`t (${maxT}s)`, pad.left + plotW - 14, pad.top + plotH + 20);
-
-      // Asymptote for x-t
-      if (type === 'x') {
-        const yMaxLine = toY(p.xmax);
-        ctx.save();
-        ctx.strokeStyle = 'rgba(239, 68, 68, 0.55)';
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(pad.left, yMaxLine);
-        ctx.lineTo(pad.left + plotW, yMaxLine);
-        ctx.stroke();
-        ctx.restore();
+      function setChaseCam(enabled) {
+        state.chaseCam = enabled;
+        chaseToggle.checked = enabled;
+        hudCamIcon.textContent = enabled ? '🎯' : '🎥';
+        hudCamLabel.textContent = enabled ? '镜头：智能跟拍特写' : '镜头：全景航道视野';
+        const p = getPhysics(state.t);
+        state.camCenterX = enabled ? p.x + 8.0 : p.xmax * 0.54;
+        state.camVelX = 0.0;
       }
 
-      // Characteristic time tau marker
-      if (p.tau <= maxT) {
-        const tauX = toX(p.tau);
-        const tauVal = type === 'v' ? state.v0 * Math.exp(-1) : p.xmax * (1 - Math.exp(-1));
-        const tauY = toY(tauVal);
-
-        ctx.save();
-        ctx.strokeStyle = 'rgba(168, 85, 247, 0.6)';
-        ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        ctx.moveTo(tauX, pad.top + plotH);
-        ctx.lineTo(tauX, tauY);
-        ctx.lineTo(pad.left, tauY);
-        ctx.stroke();
-        ctx.restore();
-
-        ctx.fillStyle = '#c084fc';
-        ctx.font = '11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`τ=${p.tau.toFixed(1)}s`, tauX, pad.top + plotH + 14);
-      }
-
-      // Curve
-      const curveColor = type === 'v' ? '#22c55e' : '#38bdf8';
-      ctx.strokeStyle = curveColor;
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      const steps = 120;
-      for (let i = 0; i <= steps; i++) {
-        const ti = (i / steps) * maxT;
-        const yi = type === 'v'
-          ? state.v0 * Math.exp(-p.beta * ti)
-          : p.xmax * (1 - Math.exp(-p.beta * ti));
-        const sx = toX(ti);
-        const sy = toY(yi);
-        if (i === 0) ctx.moveTo(sx, sy);
-        else ctx.lineTo(sx, sy);
-      }
-      ctx.stroke();
-
-      // Current state dot
-      const curVal = type === 'v' ? p.v : p.x;
-      const curX = toX(state.t);
-      const curY = toY(curVal);
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(curX, curY, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = curveColor;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    function loop(timestamp) {
-      if (state.lastTimestamp !== null && state.playing) {
-        const dt = Math.min(0.05, (timestamp - state.lastTimestamp) / 1000);
-        state.t += dt;
-        const maxT = getMaxTime();
-        if (state.t >= maxT) {
-          state.t = maxT;
-          state.playing = false;
-          playPauseBtn.textContent = '重播';
-        }
+      function resetSimulation() {
+        state.t = 0.0;
+        state.droplets = [];
+        state.ripples = [];
+        state.foamBubbles = [];
+        state.sprayAccumulator = 0.0;
+        state.foamAccumulator = 0.0;
+        const p = getPhysics(0.0);
+        state.camCenterX = state.chaseCam ? 8.0 : p.xmax * 0.54;
+        state.camVelX = 0.0;
+        setPlaying(true);
         syncUI();
       }
-      state.lastTimestamp = timestamp;
 
-      drawSimulation();
-      drawChart(vChart, 'v');
-      drawChart(xChart, 'x');
-      requestAnimationFrame(loop);
-    }
+      function syncUI() {
+        massVal.textContent = `${state.m} kg`;
+        kVal.textContent = `${state.k} N·s/m`;
+        v0Val.textContent = `${state.v0.toFixed(1)} m/s`;
 
-    syncUI();
-    requestAnimationFrame(loop);
+        const maxT = getMaxTime();
+        timeSlider.max = String(maxT);
+        if (state.t > maxT) state.t = maxT;
+        timeSlider.value = String(state.t);
+        timeVal.textContent = `${state.t.toFixed(2)} s`;
+
+        const p = getPhysics(state.t);
+        betaOut.innerHTML = `${p.beta.toFixed(3)} s<sup>&minus;1</sup>`;
+        halfLifeOut.textContent = `${p.halfLife.toFixed(2)} s`;
+        tauOut.textContent = `${p.tau.toFixed(2)} s`;
+        xTauOut.textContent = `${p.xTau.toFixed(1)} m`;
+
+        xmaxOut.textContent = `${p.xmax.toFixed(1)} m`;
+        const xRatio = p.xmax > 0 ? (p.x / p.xmax) * 100.0 : 0.0;
+        xPctOut.textContent = `${xRatio.toFixed(1)}%`;
+        xCurOut.textContent = `${p.x.toFixed(1)} m`;
+
+        velOut.textContent = `${p.v.toFixed(2)} m/s`;
+        forceOut.textContent = `${p.force.toFixed(0)} N`;
+
+        ekOut.textContent = `${(p.ek / 1000.0).toFixed(2)} kJ`;
+        ek0Out.textContent = `${(p.ek0 / 1000.0).toFixed(2)} kJ`;
+        qOut.textContent = `${(p.qDissipated / 1000.0).toFixed(2)} kJ`;
+        const qPct = p.ek0 > 0 ? (p.qDissipated / p.ek0) * 100.0 : 0.0;
+        qPctOut.textContent = `${qPct.toFixed(1)}%`;
+
+        tauProgressBadge.textContent = `t / τ = ${(state.t / p.tau).toFixed(2)}`;
+      }
+
+      // ==========================================================================
+      // 4. WebGL GLSL 片元着色器引擎 (暮光高山湖泊、星野、极光/月光倒影、焦散水波)
+      // ==========================================================================
+      const waterRenderer = {
+        gl: null,
+        program: null,
+        uniforms: {},
+        supported: false
+      };
+
+      const VERT_SRC = `
+        attribute vec2 a_pos;
+        void main() {
+          gl_Position = vec4(a_pos, 0.0, 1.0);
+        }
+      `;
+
+      const FRAG_SRC = `
+        precision highp float;
+        uniform vec2 u_res;
+        uniform float u_time;
+        uniform float u_waterLine;
+        uniform float u_camX;
+        uniform float u_boatScreenX;
+        uniform float u_speedRatio;
+
+        float hash21(vec2 p) {
+          p = fract(p * vec2(123.34, 456.21));
+          p += dot(p, p + 45.32);
+          return fract(p.x * p.y);
+        }
+
+        float noise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          float a = hash21(i);
+          float b = hash21(i + vec2(1.0, 0.0));
+          float c = hash21(i + vec2(0.0, 1.0));
+          float d = hash21(i + vec2(1.0, 1.0));
+          return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+        }
+
+        float fbm(vec2 p) {
+          float v = 0.0;
+          float amp = 0.5;
+          for (int i = 0; i < 4; i++) {
+            v += amp * noise(p);
+            p = p * 2.03 + vec2(17.1, 31.7);
+            amp *= 0.5;
+          }
+          return v;
+        }
+
+        float mountainRidge(float x, float scale, float seed) {
+          float h = sin(x * scale + seed) * 0.5 + 0.5;
+          h += 0.45 * sin(x * scale * 2.31 - seed * 1.7);
+          h += 0.22 * sin(x * scale * 5.17 + seed * 0.6);
+          return clamp(h * 0.55, 0.0, 1.0);
+        }
+
+        void main() {
+          vec2 uv = gl_FragCoord.xy / u_res.xy;
+          // gl_FragCoord.y = 0 在底部, u_waterLine 为自顶向下比例 (例如 0.56)
+          float waterLevelFromBottom = 1.0 - u_waterLine;
+
+          if (uv.y >= waterLevelFromBottom) {
+            // ================= 暮光天穹与多层视差高山剪影 =================
+            float skyT = clamp((uv.y - waterLevelFromBottom) / max(0.001, 1.0 - waterLevelFromBottom), 0.0, 1.0);
+            vec3 zenithCol = vec3(0.016, 0.032, 0.086);
+            vec3 midSkyCol = vec3(0.045, 0.115, 0.245);
+            vec3 horizonCol = vec3(0.145, 0.225, 0.345);
+            vec3 sky = mix(horizonCol, midSkyCol, smoothstep(0.0, 0.42, skyT));
+            sky = mix(sky, zenithCol, smoothstep(0.35, 1.0, skyT));
+
+            // 暮光/月轮微光晕 (位于右上方 0.76 处)
+            vec2 moonPos = vec2(0.76, waterLevelFromBottom + 0.24);
+            vec2 aspectUV = vec2((uv.x - moonPos.x) * (u_res.x / u_res.y), uv.y - moonPos.y);
+            float moonDist = length(aspectUV);
+            sky += vec3(0.18, 0.28, 0.42) * exp(-moonDist * 4.5);
+            sky += vec3(0.75, 0.88, 0.98) * smoothstep(0.032, 0.018, moonDist) * 0.65;
+
+            // 闪烁星野
+            vec2 starGrid = floor(uv * vec2(170.0, 85.0));
+            float starSeed = hash21(starGrid);
+            if (starSeed > 0.986 && skyT > 0.16) {
+              vec2 cellLocal = fract(uv * vec2(170.0, 85.0)) - 0.5;
+              float d = length(cellLocal);
+              float twinkle = 0.55 + 0.45 * sin(u_time * 2.6 + starSeed * 62.8);
+              float starBright = smoothstep(0.35, 0.03, d) * twinkle * smoothstep(0.16, 0.55, skyT);
+              sky += vec3(0.78, 0.90, 1.0) * starBright;
+            }
+
+            // 远山剪影 Layer 1 (较远浅靛蓝山脉)
+            float farX = uv.x * 4.2 + u_camX * 0.00055;
+            float farH = waterLevelFromBottom + 0.035 + 0.15 * mountainRidge(farX, 2.2, 1.3);
+            if (uv.y < farH) {
+              sky = mix(vec3(0.035, 0.075, 0.165), vec3(0.065, 0.135, 0.265), (uv.y - waterLevelFromBottom) / 0.18);
+            }
+
+            // 近山剪影 Layer 2 (深邃剪影山脊)
+            float nearX = uv.x * 5.6 + u_camX * 0.0014;
+            float nearH = waterLevelFromBottom + 0.012 + 0.095 * mountainRidge(nearX, 2.9, 4.1);
+            if (uv.y < nearH) {
+              sky = vec3(0.018, 0.038, 0.092);
+            }
+
+            gl_FragColor = vec4(sky, 1.0);
+          } else {
+            // ================= 物理水波、次表面散射与月光镜面反射 =================
+            float depthT = clamp((waterLevelFromBottom - uv.y) / max(0.001, waterLevelFromBottom), 0.0, 1.0);
+            float persp = mix(0.25, 1.85, depthT);
+            float worldWaveX = uv.x * 16.0 + u_camX * 0.035;
+
+            // 多频行进重力-张力波法线扰动
+            float w1 = sin(worldWaveX * 2.4 - u_time * 2.1 + depthT * 18.0);
+            float w2 = sin(worldWaveX * 5.3 + u_time * 1.4 - depthT * 34.0) * 0.5;
+            float w3 = fbm(vec2(worldWaveX * 1.6, depthT * 9.0 - u_time * 0.85)) * 2.0 - 1.0;
+            float waveSlope = (w1 * 0.45 + w2 * 0.35 + w3 * 0.55) * mix(0.35, 1.0, depthT);
+
+            // 深水至浅水次表面青碧色散射
+            vec3 surfaceCol = vec3(0.035, 0.165, 0.285);
+            vec3 deepCol    = vec3(0.012, 0.055, 0.125);
+            vec3 waterCol   = mix(surfaceCol, deepCol, pow(depthT, 0.72));
+
+            // 水下焦散光网 (Subsurface Caustics)
+            float causticA = fbm(vec2(worldWaveX * 1.35 + waveSlope * 0.4, depthT * 7.5 + u_time * 0.45));
+            float causticB = fbm(vec2(worldWaveX * 2.1 - u_time * 0.35, depthT * 10.0 - waveSlope * 0.3));
+            float caustic = pow(clamp(1.0 - abs(causticA - causticB) * 3.8, 0.0, 1.0), 3.0);
+            waterCol += vec3(0.04, 0.24, 0.32) * caustic * (1.0 - depthT * 0.65) * 0.75;
+
+            // 月光水面波光粼粼镜面反射带
+            float glintAxis = 0.76 + waveSlope * 0.045;
+            float glintDist = abs(uv.x - glintAxis);
+            float sparkle = smoothstep(0.11, 0.0, glintDist) * smoothstep(0.15, 0.85, waveSlope + 0.55);
+            waterCol += vec3(0.45, 0.68, 0.85) * sparkle * (1.0 - depthT * 0.55) * 0.65;
+
+            // 汽艇底部青色水下投影与尾流扰动高光
+            float boatDx = (uv.x - u_boatScreenX) * (u_res.x / u_res.y);
+            float boatShadow = exp(-boatDx * boatDx * 140.0) * exp(-depthT * 16.0);
+            waterCol *= (1.0 - 0.38 * boatShadow);
+            waterCol += vec3(0.06, 0.32, 0.45) * exp(-boatDx * boatDx * 55.0) * exp(-depthT * 12.0) * u_speedRatio;
+
+            // 水岸交界微光高光带
+            float horizonSheen = exp(-depthT * 42.0);
+            waterCol += vec3(0.16, 0.38, 0.54) * horizonSheen * (0.65 + 0.35 * waveSlope);
+
+            gl_FragColor = vec4(waterCol, 1.0);
+          }
+        }
+      `;
+
+      function initWebGLWater() {
+        try {
+          const gl = glWaterCanvas.getContext('webgl', { antialias: false, alpha: false }) ||
+                     glWaterCanvas.getContext('experimental-webgl');
+          if (!gl) return;
+
+          const compileShader = (type, src) => {
+            const sh = gl.createShader(type);
+            gl.shaderSource(sh, src);
+            gl.compileShader(sh);
+            if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+              gl.deleteShader(sh);
+              return null;
+            }
+            return sh;
+          };
+
+          const vs = compileShader(gl.VERTEX_SHADER, VERT_SRC);
+          const fs = compileShader(gl.FRAGMENT_SHADER, FRAG_SRC);
+          if (!vs || !fs) return;
+
+          const prog = gl.createProgram();
+          gl.attachShader(prog, vs);
+          gl.attachShader(prog, fs);
+          gl.linkProgram(prog);
+          if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+
+          const buf = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            -1, -1,  1, -1, -1,  1,
+            -1,  1,  1, -1,  1,  1
+          ]), gl.STATIC_DRAW);
+
+          const aPos = gl.getAttribLocation(prog, 'a_pos');
+          gl.enableVertexAttribArray(aPos);
+          gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+          waterRenderer.gl = gl;
+          waterRenderer.program = prog;
+          waterRenderer.uniforms = {
+            u_res: gl.getUniformLocation(prog, 'u_res'),
+            u_time: gl.getUniformLocation(prog, 'u_time'),
+            u_waterLine: gl.getUniformLocation(prog, 'u_waterLine'),
+            u_camX: gl.getUniformLocation(prog, 'u_camX'),
+            u_boatScreenX: gl.getUniformLocation(prog, 'u_boatScreenX'),
+            u_speedRatio: gl.getUniformLocation(prog, 'u_speedRatio')
+          };
+          waterRenderer.supported = true;
+          renderModeBadge.textContent = 'WebGL GLSL 着色器';
+        } catch (err) {
+          waterRenderer.supported = false;
+          renderModeBadge.textContent = 'Canvas 2D 光学降级';
+        }
+      }
+
+      function renderWaterBackground(waterLineRatio, boatScreenNormX, speedRatio) {
+        const rect = glWaterCanvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const tw = Math.max(10, Math.round(rect.width * dpr));
+        const th = Math.max(10, Math.round(rect.height * dpr));
+
+        if (waterRenderer.supported && waterRenderer.gl) {
+          const gl = waterRenderer.gl;
+          if (glWaterCanvas.width !== tw || glWaterCanvas.height !== th) {
+            glWaterCanvas.width = tw;
+            glWaterCanvas.height = th;
+          }
+          gl.viewport(0, 0, tw, th);
+          gl.useProgram(waterRenderer.program);
+          gl.uniform2f(waterRenderer.uniforms.u_res, tw, th);
+          gl.uniform1f(waterRenderer.uniforms.u_time, state.wallClock);
+          gl.uniform1f(waterRenderer.uniforms.u_waterLine, waterLineRatio);
+          gl.uniform1f(waterRenderer.uniforms.u_camX, state.camCenterX);
+          gl.uniform1f(waterRenderer.uniforms.u_boatScreenX, boatScreenNormX);
+          gl.uniform1f(waterRenderer.uniforms.u_speedRatio, speedRatio);
+          gl.drawArrays(gl.TRIANGLES, 0, 6);
+        } else {
+          // Canvas 2D 高品质降级渲染
+          if (glWaterCanvas.width !== tw || glWaterCanvas.height !== th) {
+            glWaterCanvas.width = tw;
+            glWaterCanvas.height = th;
+          }
+          const ctx = glWaterCanvas.getContext('2d');
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          const w = rect.width;
+          const h = rect.height;
+          const wy = h * waterLineRatio;
+
+          const skyGrad = ctx.createLinearGradient(0, 0, 0, wy);
+          skyGrad.addColorStop(0, '#040814');
+          skyGrad.addColorStop(1, '#162c4e');
+          ctx.fillStyle = skyGrad;
+          ctx.fillRect(0, 0, w, wy);
+
+          const watGrad = ctx.createLinearGradient(0, wy, 0, h);
+          watGrad.addColorStop(0, '#0c4a6e');
+          watGrad.addColorStop(1, '#04182b');
+          ctx.fillStyle = watGrad;
+          ctx.fillRect(0, wy, w, h - wy);
+        }
+      }
+
+      // ==========================================================================
+      // 5. 物理驱动流体粒子系统 (船首浪花飞沫 + 扩散水面涟漪 + 船尾空化泡沫)
+      // ==========================================================================
+      function updateFluidParticles(dt, physics) {
+        if (!state.showWake || !state.playing || dt <= 0) return;
+
+        const speedRatio = physics.v / Math.max(1.0, state.v0);
+        const powerRatio = (physics.v * physics.v) / Math.max(1.0, state.v0 * state.v0);
+
+        // 1. 船首浪花飞沫水滴 (速度越快，喷射频率与初速度越高，受重力 g = 9.8 m/s² 下落回湖面)
+        const sprayRate = 58.0 * powerRatio;
+        state.sprayAccumulator += sprayRate * dt;
+        while (state.sprayAccumulator >= 1.0 && state.droplets.length < 180) {
+          state.sprayAccumulator -= 1.0;
+          const bowWorldX = physics.x + 2.4;
+          state.droplets.push({
+            wx: bowWorldX + (Math.random() - 0.3) * 0.6,
+            wy: 0.15, // 相对水面高度 (m)
+            vx: physics.v * (0.45 + Math.random() * 0.45) + 1.5,
+            vy: (1.4 + Math.random() * 2.8) * Math.sqrt(speedRatio),
+            radius: 1.4 + Math.random() * 1.8,
+            alpha: 0.85
+          });
+        }
+
+        // 更新飞沫水滴运动学 (抛体轨迹 + 落水生成涟漪)
+        for (let i = state.droplets.length - 1; i >= 0; i--) {
+          const d = state.droplets[i];
+          d.wx += d.vx * dt;
+          d.wy += d.vy * dt;
+          d.vy -= GRAVITY * dt;
+          if (d.wy <= 0.0 && d.vy < 0.0) {
+            if (state.ripples.length < 65) {
+              state.ripples.push({
+                wx: d.wx,
+                age: 0.0,
+                maxAge: 0.85 + Math.random() * 0.4,
+                maxRadiusM: 1.2 + speedRatio * 1.6
+              });
+            }
+            state.droplets.splice(i, 1);
+          }
+        }
+
+        // 2. 船尾空化泡沫气泡 (Stern Cavitation Foam)
+        const foamRate = 48.0 * speedRatio;
+        state.foamAccumulator += foamRate * dt;
+        while (state.foamAccumulator >= 1.0 && state.foamBubbles.length < 160) {
+          state.foamAccumulator -= 1.0;
+          state.foamBubbles.push({
+            wx: physics.x - 2.6 - Math.random() * 1.2,
+            offsetY: (Math.random() - 0.5) * 8.0,
+            vx: -0.8 - Math.random() * 1.5,
+            age: 0.0,
+            maxAge: 1.1 + Math.random() * 0.9,
+            size: 1.6 + Math.random() * 2.6
+          });
+        }
+
+        for (let i = state.foamBubbles.length - 1; i >= 0; i--) {
+          const b = state.foamBubbles[i];
+          b.wx += b.vx * dt;
+          b.age += dt;
+          if (b.age >= b.maxAge) {
+            state.foamBubbles.splice(i, 1);
+          }
+        }
+
+        // 3. 更新水面扩散涟漪
+        for (let i = state.ripples.length - 1; i >= 0; i--) {
+          const r = state.ripples[i];
+          r.age += dt;
+          if (r.age >= r.maxAge) {
+            state.ripples.splice(i, 1);
+          }
+        }
+      }
+
+      // ==========================================================================
+      // 6. 顶层 Retina Canvas 2D 物理与船体渲染 (simCanvas)
+      // ==========================================================================
+      function setupHiDPICanvas(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(10, rect.width);
+        const h = Math.max(10, rect.height);
+        const tw = Math.round(w * dpr);
+        const th = Math.round(h * dpr);
+        if (canvas.width !== tw || canvas.height !== th) {
+          canvas.width = tw;
+          canvas.height = th;
+        }
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, w, h };
+      }
+
+      function drawRoundRect(ctx, x, y, w, h, r) {
+        const rad = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rad, y);
+        ctx.lineTo(x + w - rad, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+        ctx.lineTo(x + w, y + h - rad);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+        ctx.lineTo(x + rad, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+        ctx.lineTo(x, y + rad);
+        ctx.quadraticCurveTo(x, y, x + rad, y);
+        ctx.closePath();
+      }
+
+      function drawNeonArrow(ctx, x1, y1, x2, y2, color, label, alignAbove = true) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.hypot(dx, dy);
+        if (len < 5) return;
+        const ang = Math.atan2(dy, dx);
+        const head = Math.min(11, Math.max(6.5, len * 0.28));
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 9;
+        ctx.lineWidth = 2.6;
+        ctx.lineCap = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2 - head * 0.65 * Math.cos(ang), y2 - head * 0.65 * Math.sin(ang));
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - head * Math.cos(ang - Math.PI / 6), y2 - head * Math.sin(ang - Math.PI / 6));
+        ctx.lineTo(x2 - head * Math.cos(ang + Math.PI / 6), y2 - head * Math.sin(ang + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        if (label) {
+          ctx.font = '700 11px ui-monospace, monospace';
+          const textW = ctx.measureText(label).width;
+          const padX = 6;
+          const boxW = textW + padX * 2;
+          const boxH = 18;
+          const lx = dx >= 0 ? x2 + 6 : x2 - boxW - 6;
+          const ly = alignAbove ? y2 - boxH - 3 : y2 + 5;
+
+          ctx.fillStyle = 'rgba(5, 10, 21, 0.85)';
+          drawRoundRect(ctx, lx, ly, boxW, boxH, 5);
+          ctx.fill();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.0;
+          ctx.stroke();
+
+          ctx.fillStyle = '#f8fafc';
+          ctx.textAlign = 'left';
+          ctx.fillText(label, lx + padX, ly + 12.5);
+        }
+        ctx.restore();
+      }
+
+      /**
+       * 绘制高精细金属质感水翼快艇 + 水面波形扭曲倒影 + 滑行仰角与浮力微颤
+       */
+      function drawArticulatedSpeedboat(ctx, bx, waterY, speedRatio, isGhost) {
+        // 滑行仰角 (Planing Trim): 高速时船首上抬约 7.5° 并略微抬升吃水线，减速后平稳回落伴随轻微浮力起伏
+        const planingLift = isGhost ? 1.0 : speedRatio * speedRatio;
+        const bobbing = isGhost ? 0.0 : Math.sin(state.wallClock * 3.8) * (1.2 + 0.8 * (1.0 - speedRatio));
+        const pitchRad = -(planingLift * 7.2 + Math.sin(state.wallClock * 2.9) * 0.8) * DEG2RAD;
+        const hullY = waterY + 2.0 - planingLift * 3.2 + bobbing;
+
+        // 1. 先在水面下方绘制波纹扭曲倒影 (仅主快艇)
+        if (!isGhost) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(bx - 65, waterY + 1, 130, 56);
+          ctx.clip();
+
+          // 分 5 条水平波纹切片制造真实的湖面波光拉扯倒影
+          for (let slice = 0; slice < 5; slice++) {
+            const sy0 = waterY + 2 + slice * 7;
+            const waveShift = Math.sin(state.wallClock * 4.5 + slice * 1.4) * (1.8 + slice * 0.7);
+            ctx.save();
+            ctx.translate(bx + waveShift, waterY + 3);
+            ctx.scale(1.0, -0.52);
+            ctx.rotate(pitchRad);
+            ctx.globalAlpha = 0.24 - slice * 0.038;
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.moveTo(-34, 0);
+            ctx.lineTo(24, 0);
+            ctx.lineTo(38, -11);
+            ctx.lineTo(-30, -11);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#e2e8f0';
+            ctx.beginPath();
+            ctx.moveTo(-12, -11);
+            ctx.lineTo(13, -11);
+            ctx.lineTo(4, -21);
+            ctx.lineTo(-14, -21);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+          }
+          ctx.restore();
+        }
+
+        // 2. 绘制船体本体
+        ctx.save();
+        ctx.translate(bx, hullY);
+        ctx.rotate(pitchRad);
+
+        if (isGhost) {
+          ctx.globalAlpha = 0.36;
+        }
+
+        // 船底水线金属阴影脊
+        ctx.fillStyle = isGhost ? '#38bdf8' : '#0f172a';
+        ctx.beginPath();
+        ctx.moveTo(-34, 1);
+        ctx.lineTo(23, 1);
+        ctx.lineTo(30, -3);
+        ctx.lineTo(-33, -3);
+        ctx.closePath();
+        ctx.fill();
+
+        // 主船壳流线轮廓 (银白-天青金属渐变)
+        const hullGrad = ctx.createLinearGradient(-34, -12, 38, 0);
+        if (isGhost) {
+          hullGrad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+          hullGrad.addColorStop(1, 'rgba(148, 163, 184, 0.45)');
+        } else {
+          hullGrad.addColorStop(0, '#1e293b');
+          hullGrad.addColorStop(0.35, '#38bdf8');
+          hullGrad.addColorStop(0.85, '#e0f2fe');
+          hullGrad.addColorStop(1, '#ffffff');
+        }
+        ctx.fillStyle = hullGrad;
+        ctx.beginPath();
+        ctx.moveTo(-34, -2);
+        ctx.lineTo(25, -2);
+        ctx.lineTo(39, -12);
+        ctx.lineTo(-31, -12);
+        ctx.closePath();
+        ctx.fill();
+
+        if (isGhost) {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.setLineDash([3, 2]);
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else {
+          // 船身翡翠绿流体动力学饰条
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(-29, -6.5);
+          ctx.lineTo(32, -8.5);
+          ctx.stroke();
+        }
+
+        // 驾驶舱流线型深色玻璃罩
+        const glassGrad = ctx.createLinearGradient(-12, -21, 12, -12);
+        glassGrad.addColorStop(0, isGhost ? '#94a3b8' : '#0f172a');
+        glassGrad.addColorStop(0.5, isGhost ? '#cbd5e1' : '#1e3a5f');
+        glassGrad.addColorStop(1, isGhost ? '#e2e8f0' : '#38bdf8');
+        ctx.fillStyle = glassGrad;
+        ctx.beginPath();
+        ctx.moveTo(-14, -12);
+        ctx.lineTo(15, -12);
+        ctx.lineTo(5, -21);
+        ctx.lineTo(-15, -21);
+        ctx.closePath();
+        ctx.fill();
+
+        if (!isGhost) {
+          // 驾驶舱高光边与雷达桅杆
+          ctx.strokeStyle = 'rgba(248, 250, 252, 0.7)';
+          ctx.lineWidth = 1.1;
+          ctx.beginPath();
+          ctx.moveTo(-13, -20);
+          ctx.lineTo(4, -20);
+          ctx.lineTo(13, -13);
+          ctx.stroke();
+
+          // 船尾推进器外壳
+          ctx.fillStyle = '#0f172a';
+          ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 1.1;
+          drawRoundRect(ctx, -38, -14, 6, 13, 2);
+          ctx.fill();
+          ctx.stroke();
+
+          // 航行灯：船首右舷绿灯 + 船尾白锚灯
+          ctx.fillStyle = '#10b981';
+          ctx.shadowColor = '#10b981';
+          ctx.shadowBlur = 7;
+          ctx.beginPath();
+          ctx.arc(34, -11.5, 2.0, 0, TWO_PI);
+          ctx.fill();
+
+          ctx.fillStyle = '#f8fafc';
+          ctx.shadowColor = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(-16, -23, 1.8, 0, TWO_PI);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.restore();
+      }
+
+      /**
+       * 绘制开尔文尾迹波 (±19.47° 楔形尾流) 与粒子特效
+       */
+      function renderWakeAndParticles(ctx, toScreenX, waterY, physics, speedRatio, pxPerMeter) {
+        if (!state.showWake) return;
+        const bx = toScreenX(physics.x);
+        const bowX = bx + 32;
+        const sternX = bx - 34;
+
+        // 1. 开尔文楔形尾流 (Kelvin Wake ±19.47°)
+        const powerRatio = speedRatio * speedRatio;
+        if (powerRatio > 0.008) {
+          const wakeLenPx = Math.min(260, Math.max(24, powerRatio * 220));
+          const tanKelvin = Math.tan(19.47 * DEG2RAD); // ≈ 0.3535
+
+          ctx.save();
+          const wakeGrad = ctx.createLinearGradient(bowX, waterY, bowX - wakeLenPx, waterY);
+          wakeGrad.addColorStop(0, `rgba(224, 242, 254, ${0.65 * Math.sqrt(speedRatio)})`);
+          wakeGrad.addColorStop(0.5, `rgba(56, 189, 248, ${0.28 * speedRatio})`);
+          wakeGrad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+
+          // 下侧主开尔文波臂 (透视投影压扁比例 0.38)
+          ctx.strokeStyle = wakeGrad;
+          ctx.lineWidth = 2.4;
+          ctx.beginPath();
+          ctx.moveTo(bowX - 4, waterY + 1);
+          ctx.lineTo(bowX - wakeLenPx, waterY + 1 + wakeLenPx * tanKelvin * 0.42);
+          ctx.stroke();
+
+          // 船尾白浪尾迹带
+          const foamGrad = ctx.createLinearGradient(sternX, waterY, sternX - wakeLenPx * 0.85, waterY);
+          foamGrad.addColorStop(0, `rgba(248, 250, 252, ${0.75 * speedRatio})`);
+          foamGrad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+          ctx.strokeStyle = foamGrad;
+          ctx.lineWidth = 3.2;
+          ctx.beginPath();
+          ctx.moveTo(sternX, waterY + 1);
+          ctx.lineTo(sternX - wakeLenPx * 0.85, waterY + 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 2. 水面扩散椭圆涟漪
+        state.ripples.forEach((rp) => {
+          const prog = rp.age / rp.maxAge;
+          const rx = Math.max(3, rp.maxRadiusM * prog * Math.min(18, pxPerMeter * 1.6));
+          const ry = rx * 0.28;
+          const sx = toScreenX(rp.wx);
+          ctx.save();
+          ctx.strokeStyle = `rgba(186, 230, 253, ${(1.0 - prog) * 0.55})`;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.ellipse(sx, waterY + 3, rx, ry, 0, 0, TWO_PI);
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // 3. 船尾空化泡沫气泡
+        state.foamBubbles.forEach((b) => {
+          const prog = b.age / b.maxAge;
+          const sx = toScreenX(b.wx);
+          const sy = waterY + 3 + Math.abs(b.offsetY) * (0.4 + prog * 0.9);
+          ctx.save();
+          ctx.fillStyle = `rgba(240, 249, 255, ${(1.0 - prog) * 0.65})`;
+          ctx.beginPath();
+          ctx.arc(sx, sy, b.size * (1.0 - prog * 0.4), 0, TWO_PI);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        // 4. 船首浪花飞沫水滴 (受重力下落)
+        state.droplets.forEach((d) => {
+          const sx = toScreenX(d.wx);
+          const sy = waterY - d.wy * 14.0;
+          ctx.save();
+          ctx.fillStyle = 'rgba(224, 242, 254, 0.88)';
+          ctx.beginPath();
+          ctx.arc(sx, sy, d.radius, 0, TWO_PI);
+          ctx.fill();
+          ctx.restore();
+        });
+      }
+
+      function renderSimulationViewport() {
+        const { ctx, w, h } = setupHiDPICanvas(simCanvas);
+        const p = getPhysics(state.t);
+        const speedRatio = p.v / Math.max(0.1, state.v0);
+
+        const waterLineRatio = 0.57;
+        const waterY = h * waterLineRatio;
+
+        // 计算双镜头坐标映射 toScreenX(worldX)
+        let toScreenX;
+        let viewMinX;
+        let viewMaxX;
+        let pxPerMeter;
+
+        if (state.chaseCam) {
+          // 智能跟拍特写镜头：固定视窗宽度 38 m，锁定在弹簧摄像机中心 camCenterX
+          const windowSpanM = 38.0;
+          viewMinX = state.camCenterX - windowSpanM * 0.36;
+          viewMaxX = state.camCenterX + windowSpanM * 0.64;
+          pxPerMeter = w / windowSpanM;
+          toScreenX = (wx) => (wx - viewMinX) * pxPerMeter;
+        } else {
+          // 全景航道视野：完整涵盖 [0, 1.18 * x_max]
+          const leftPad = 56;
+          const rightPad = w - 48;
+          viewMinX = 0.0;
+          viewMaxX = Math.max(12.0, p.xmax * 1.18);
+          pxPerMeter = (rightPad - leftPad) / viewMaxX;
+          toScreenX = (wx) => leftPad + wx * pxPerMeter;
+        }
+
+        const boatSx = toScreenX(p.x);
+        const boatScreenNormX = Math.max(0.0, Math.min(1.0, boatSx / w));
+
+        // 1. 渲染底层 WebGL 暮光湖泊着色器
+        renderWaterBackground(waterLineRatio, boatScreenNormX, speedRatio);
+
+        // 2. 清空顶层透明 2D 画布
+        ctx.clearRect(0, 0, w, h);
+
+        // 3. 航道距离标尺刻度线 (世界坐标锚定，跟拍时真实向后飞掠)
+        const targetTicks = 6;
+        const rawStep = (viewMaxX - viewMinX) / targetTicks;
+        const mag = Math.pow(10, Math.floor(Math.log10(Math.max(0.1, rawStep))));
+        const step = Math.ceil(rawStep / mag) * mag;
+        const firstTick = Math.max(0, Math.floor(viewMinX / step) * step);
+
+        ctx.save();
+        ctx.font = '600 10px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        for (let dist = firstTick; dist <= viewMaxX + step; dist += step) {
+          const sx = toScreenX(dist);
+          if (sx < 14 || sx > w - 14) continue;
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.32)';
+          ctx.lineWidth = 1.1;
+          ctx.beginPath();
+          ctx.moveTo(sx, waterY);
+          ctx.lineTo(sx, waterY + 8);
+          ctx.stroke();
+
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillText(`${dist % 1 === 0 ? dist.toFixed(0) : dist.toFixed(1)} m`, sx, waterY + 21);
+        }
+        ctx.restore();
+
+        // 4. 起点浮标 (x = 0)
+        const startSx = toScreenX(0);
+        if (startSx >= -20 && startSx <= w + 20) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.moveTo(startSx, waterY - 26);
+          ctx.lineTo(startSx, waterY + 12);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.arc(startSx, waterY, 4.5, 0, TWO_PI);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // 5. 特征弛豫里程碑浮标 x(τ) = 0.6321 · x_max (紫色)
+        const tauSx = toScreenX(p.xTau);
+        if (tauSx >= 10 && tauSx <= w - 10) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(168, 85, 247, 0.55)';
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          ctx.moveTo(tauSx, waterY - 34);
+          ctx.lineTo(tauSx, h - 10);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = '#a855f7';
+          ctx.beginPath();
+          ctx.arc(tauSx, waterY, 5.0, 0, TWO_PI);
+          ctx.fill();
+
+          ctx.font = '700 9.5px ui-monospace, monospace';
+          ctx.fillStyle = '#d8b4fe';
+          ctx.textAlign = 'center';
+          ctx.fillText(`x(τ)=${p.xTau.toFixed(1)}m`, tauSx, waterY + 35);
+          ctx.restore();
+        }
+
+        // 6. 极限停靠激光浮标线 x_max = m·v0 / k (珊瑚红脉冲)
+        const limitSx = toScreenX(p.xmax);
+        if (limitSx >= -20 && limitSx <= w + 20) {
+          const pulse = 0.72 + 0.28 * Math.sin(state.wallClock * 4.5);
+          ctx.save();
+          ctx.strokeStyle = `rgba(251, 113, 133, ${pulse})`;
+          ctx.shadowColor = 'rgba(251, 113, 133, 0.7)';
+          ctx.shadowBlur = 10;
+          ctx.setLineDash([5, 4]);
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.moveTo(limitSx, 34);
+          ctx.lineTo(limitSx, h - 10);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = '#fb7185';
+          ctx.beginPath();
+          ctx.arc(limitSx, waterY, 6.2, 0, TWO_PI);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          const labelTxt = `极限停靠点 x_max = ${p.xmax.toFixed(1)} m`;
+          ctx.font = '700 10.5px ui-monospace, monospace';
+          const tw = ctx.measureText(labelTxt).width + 14;
+          const lx = Math.min(w - tw - 8, Math.max(8, limitSx - tw * 0.5));
+          ctx.fillStyle = 'rgba(5, 10, 21, 0.85)';
+          drawRoundRect(ctx, lx, 12, tw, 20, 6);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(251, 113, 133, 0.6)';
+          ctx.stroke();
+
+          ctx.fillStyle = '#fda4af';
+          ctx.textAlign = 'center';
+          ctx.fillText(labelTxt, lx + tw * 0.5, 25.5);
+          ctx.restore();
+        }
+
+        // 7. 无阻力参照艇 (F_f = 0, 匀速 v0) 及其与实际快艇的位移差标注 Δx
+        if (state.showGhost) {
+          const ghostSx = toScreenX(p.ghostX);
+          const ghostY = waterY - 30;
+          if (ghostSx >= -60 && ghostSx <= w + 60) {
+            drawArticulatedSpeedboat(ctx, ghostSx, ghostY, 1.0, true);
+
+            ctx.save();
+            ctx.font = '600 9.5px ui-monospace, monospace';
+            ctx.fillStyle = '#7dd3fc';
+            ctx.textAlign = 'center';
+            ctx.fillText(`无阻力对照 (v₀=${state.v0.toFixed(0)}m/s)`, ghostSx, ghostY - 26);
+
+            // 绘制 Δx = v0·t - x(t) 间距虚线
+            const gapM = p.ghostX - p.x;
+            if (gapM > 0.5 && Math.abs(ghostSx - boatSx) > 28) {
+              ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+              ctx.setLineDash([3, 3]);
+              ctx.beginPath();
+              ctx.moveTo(boatSx, ghostY - 12);
+              ctx.lineTo(ghostSx, ghostY - 12);
+              ctx.stroke();
+              ctx.setLineDash([]);
+              ctx.fillText(`Δx = ${gapM.toFixed(1)} m`, (boatSx + ghostSx) * 0.5, ghostY - 16);
+            }
+            ctx.restore();
+          }
+        }
+
+        // 8. 渲染开尔文尾迹波与流体粒子
+        renderWakeAndParticles(ctx, toScreenX, waterY, p, speedRatio, pxPerMeter);
+
+        // 9. 渲染主金属水翼快艇
+        drawArticulatedSpeedboat(ctx, boatSx, waterY, speedRatio, false);
+
+        // 10. t ≈ 0 关闭发动机冲击波光环 (ENGINE CUTOFF F_thrust = 0)
+        if (state.t < 0.9) {
+          const shockProg = state.t / 0.9;
+          const shockR = 14 + shockProg * 54;
+          ctx.save();
+          ctx.strokeStyle = `rgba(56, 189, 248, ${(1.0 - shockProg) * 0.85})`;
+          ctx.lineWidth = 2.2 * (1.0 - shockProg);
+          ctx.beginPath();
+          ctx.arc(boatSx - 34, waterY - 6, shockR, 0, TWO_PI);
+          ctx.stroke();
+
+          ctx.font = '700 9.5px ui-monospace, monospace';
+          ctx.fillStyle = `rgba(186, 230, 253, ${1.0 - shockProg * 0.65})`;
+          ctx.textAlign = 'center';
+          ctx.fillText('ENGINE CUTOFF (F_thrust = 0)', boatSx, waterY - 46 - shockProg * 10);
+          ctx.restore();
+        }
+
+        // 11. 比例发光矢量箭头：速度 v(t) (翡翠绿) 与水阻力 F_f = -kv (珊瑚红)
+        if (state.showVectors) {
+          const maxArrowPx = Math.min(115, w * 0.16);
+          const arrowLen = speedRatio * maxArrowPx;
+          // 速度矢量向右，位于船首前方
+          drawNeonArrow(
+            ctx,
+            boatSx + 42,
+            waterY - 10,
+            boatSx + 42 + arrowLen,
+            waterY - 10,
+            '#10b981',
+            `v = ${p.v.toFixed(2)} m/s`,
+            true
+          );
+          // 线性水阻力矢量向左，位于船尾后方，长度与 v(t) 严格同步缩放
+          drawNeonArrow(
+            ctx,
+            boatSx - 42,
+            waterY - 10,
+            boatSx - 42 - arrowLen,
+            waterY - 10,
+            '#fb7185',
+            `|F_f| = ${p.force.toFixed(0)} N`,
+            false
+          );
+        }
+
+        // 12. 左上角透明玻璃实时数字 HUD
+        ctx.save();
+        ctx.fillStyle = 'rgba(5, 10, 21, 0.80)';
+        drawRoundRect(ctx, 12, 10, 224, 66, 9);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        ctx.font = '600 10.5px ui-monospace, monospace';
+        ctx.fillStyle = '#f8fafc';
+        ctx.textAlign = 'left';
+        ctx.fillText(`时间 t = ${state.t.toFixed(2)} s  (t/τ = ${(state.t / p.tau).toFixed(2)})`, 21, 28);
+        ctx.fillStyle = '#34d399';
+        ctx.fillText(`速度 v = ${p.v.toFixed(2)} m/s (${(speedRatio * 100).toFixed(1)}%)`, 21, 46);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText(`位移 x = ${p.x.toFixed(2)} m (${((p.x / p.xmax) * 100).toFixed(1)}%)`, 21, 64);
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 7. 底部三联同步遥测图表 (支持水平点击/拖动直接擦洗时间轴 t)
+      // ==========================================================================
+      function drawChartGrid(ctx, pad, plotW, plotH, maxXVal, maxYVal, xUnit = 's') {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(29, 45, 78, 0.65)';
+        ctx.lineWidth = 1.0;
+        ctx.font = '500 9.5px ui-monospace, monospace';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'right';
+
+        [0.0, 0.5, 1.0].forEach((frac) => {
+          const py = pad.top + plotH - frac * (plotH / 1.14);
+          const val = frac * maxYVal;
+          ctx.beginPath();
+          ctx.moveTo(pad.left, py);
+          ctx.lineTo(pad.left + plotW, py);
+          ctx.stroke();
+          ctx.fillText(val >= 100 ? val.toFixed(0) : val.toFixed(1), pad.left - 5, py + 3);
+        });
+
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.lineTo(pad.left + plotW, pad.top + plotH);
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.fillText('0', pad.left, pad.top + plotH + 15);
+        ctx.fillText(`${(maxXVal * 0.5).toFixed(0)}`, pad.left + plotW * 0.5, pad.top + plotH + 15);
+        ctx.fillText(`${maxXVal.toFixed(0)} ${xUnit}`, pad.left + plotW - 10, pad.top + plotH + 15);
+        ctx.restore();
+      }
+
+      function renderAllCharts() {
+        const p = getPhysics(state.t);
+        const maxT = getMaxTime();
+        const pad = { top: 16, right: 16, bottom: 25, left: 44 };
+
+        // ----------------------------------------------------------------------
+        // Chart 1: 速度-时间曲线 v(t)
+        // ----------------------------------------------------------------------
+        {
+          const { ctx, w, h } = setupHiDPICanvas(vChart);
+          const plotW = w - pad.left - pad.right;
+          const plotH = h - pad.top - pad.bottom;
+          const toX = (t) => pad.left + (t / maxT) * plotW;
+          const toY = (v) => pad.top + plotH - (v / (state.v0 * 1.14)) * plotH;
+
+          ctx.fillStyle = '#050a15';
+          ctx.fillRect(0, 0, w, h);
+          drawChartGrid(ctx, pad, plotW, plotH, maxT, state.v0, 's');
+
+          ctx.save();
+          // 无阻力参照虚线 v = v0
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.42)';
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(pad.left, toY(state.v0));
+          ctx.lineTo(pad.left + plotW, toY(state.v0));
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 特征时间 t = τ 标记
+          if (p.tau <= maxT) {
+            const tx = toX(p.tau);
+            const ty = toY(state.v0 * Math.exp(-1.0));
+            ctx.strokeStyle = 'rgba(168, 85, 247, 0.65)';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(tx, pad.top + plotH);
+            ctx.lineTo(tx, ty);
+            ctx.lineTo(pad.left, ty);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.font = '700 9.5px ui-monospace, monospace';
+            ctx.fillStyle = '#c084fc';
+            ctx.textAlign = 'center';
+            ctx.fillText(`τ=${p.tau.toFixed(1)}s`, tx, pad.top + 10);
+          }
+
+          // 速度曲线 v(t) = v0 exp(-βt)
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 2.4;
+          ctx.beginPath();
+          for (let i = 0; i <= 120; i++) {
+            const ti = (i / 120) * maxT;
+            const vi = state.v0 * Math.exp(-p.beta * ti);
+            const sx = toX(ti);
+            const sy = toY(vi);
+            if (i === 0) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
+          }
+          ctx.stroke();
+
+          // 当前状态点
+          const cx = toX(state.t);
+          const cy = toY(p.v);
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 4.5, 0, TWO_PI);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // ----------------------------------------------------------------------
+        // Chart 2: 位移-时间曲线 x(t)
+        // ----------------------------------------------------------------------
+        {
+          const { ctx, w, h } = setupHiDPICanvas(xChart);
+          const plotW = w - pad.left - pad.right;
+          const plotH = h - pad.top - pad.bottom;
+          const toX = (t) => pad.left + (t / maxT) * plotW;
+          const toY = (x) => pad.top + plotH - (x / (p.xmax * 1.14)) * plotH;
+
+          ctx.fillStyle = '#050a15';
+          ctx.fillRect(0, 0, w, h);
+          drawChartGrid(ctx, pad, plotW, plotH, maxT, p.xmax, 's');
+
+          ctx.save();
+          // 极限渐近线 x = x_max (珊瑚红虚线)
+          ctx.strokeStyle = 'rgba(251, 113, 133, 0.65)';
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(pad.left, toY(p.xmax));
+          ctx.lineTo(pad.left + plotW, toY(p.xmax));
+          ctx.stroke();
+
+          // 无阻力参照直线 x = v0 * t
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+          ctx.beginPath();
+          ctx.moveTo(pad.left, pad.top + plotH);
+          const tHitTop = (p.xmax * 1.14) / state.v0;
+          const tEndLine = Math.min(maxT, tHitTop);
+          ctx.lineTo(toX(tEndLine), toY(state.v0 * tEndLine));
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 特征时间 t = τ 标记 (63.2% x_max)
+          if (p.tau <= maxT) {
+            const tx = toX(p.tau);
+            const ty = toY(p.xTau);
+            ctx.strokeStyle = 'rgba(168, 85, 247, 0.65)';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(tx, pad.top + plotH);
+            ctx.lineTo(tx, ty);
+            ctx.lineTo(pad.left, ty);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.font = '700 9.5px ui-monospace, monospace';
+            ctx.fillStyle = '#c084fc';
+            ctx.textAlign = 'center';
+            ctx.fillText(`63.2%`, tx, ty - 6);
+          }
+
+          // 位移曲线 x(t)
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2.4;
+          ctx.beginPath();
+          for (let i = 0; i <= 120; i++) {
+            const ti = (i / 120) * maxT;
+            const xi = p.xmax * (1.0 - Math.exp(-p.beta * ti));
+            const sx = toX(ti);
+            const sy = toY(xi);
+            if (i === 0) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
+          }
+          ctx.stroke();
+
+          // 当前状态点
+          const cx = toX(state.t);
+          const cy = toY(p.x);
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 4.5, 0, TWO_PI);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // ----------------------------------------------------------------------
+        // Chart 3: 双模式图表 [相空间 v(x)] vs [动能耗散 Ek(t)]
+        // ----------------------------------------------------------------------
+        {
+          const { ctx, w, h } = setupHiDPICanvas(thirdChart);
+          const plotW = w - pad.left - pad.right;
+          const plotH = h - pad.top - pad.bottom;
+
+          ctx.fillStyle = '#050a15';
+          ctx.fillRect(0, 0, w, h);
+
+          if (state.chart3Mode === 'phase') {
+            // 相空间 v(x) = v0 - β x
+            const toX = (x) => pad.left + (x / p.xmax) * plotW;
+            const toY = (v) => pad.top + plotH - (v / (state.v0 * 1.14)) * plotH;
+
+            drawChartGrid(ctx, pad, plotW, plotH, p.xmax, state.v0, 'm');
+
+            ctx.save();
+            // 相空间面积阴影 (∫ v dx)
+            const areaGrad = ctx.createLinearGradient(pad.left, pad.top, pad.left + plotW, pad.top + plotH);
+            areaGrad.addColorStop(0, 'rgba(245, 158, 11, 0.16)');
+            areaGrad.addColorStop(1, 'rgba(16, 185, 129, 0.04)');
+            ctx.fillStyle = areaGrad;
+            ctx.beginPath();
+            ctx.moveTo(toX(0), toY(0));
+            ctx.lineTo(toX(0), toY(state.v0));
+            ctx.lineTo(toX(p.xmax), toY(0));
+            ctx.closePath();
+            ctx.fill();
+
+            // 严格直线相轨线 v(x) = v0 - β x
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2.4;
+            ctx.beginPath();
+            ctx.moveTo(toX(0), toY(state.v0));
+            ctx.lineTo(toX(p.xmax), toY(0));
+            ctx.stroke();
+
+            // 标注斜率 dv/dx = -β
+            ctx.font = '600 9.5px ui-monospace, monospace';
+            ctx.fillStyle = '#fbbf24';
+            ctx.textAlign = 'center';
+            ctx.fillText(`斜率 dv/dx = -β = -${p.beta.toFixed(3)} s⁻¹`, pad.left + plotW * 0.54, pad.top + 14);
+
+            // 当前相空间状态点 (x(t), v(t))
+            const cx = toX(p.x);
+            const cy = toY(p.v);
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 4.8, 0, TWO_PI);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+          } else {
+            // 动能耗散 Ek(t) 与水体热耗散 Q(t)
+            const ekMaxKj = p.ek0 / 1000.0;
+            const toX = (t) => pad.left + (t / maxT) * plotW;
+            const toY = (ekJ) => pad.top + plotH - (ekJ / (p.ek0 * 1.14)) * plotH;
+
+            drawChartGrid(ctx, pad, plotW, plotH, maxT, ekMaxKj, 's');
+
+            ctx.save();
+            // 初始总机械能守恒参考线 E_k0
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(pad.left, toY(p.ek0));
+            ctx.lineTo(pad.left + plotW, toY(p.ek0));
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 累积耗散能量 Q(t) = E_k0 (1 - e^(-2βt)) (珊瑚粉曲线)
+            ctx.strokeStyle = '#f472b6';
+            ctx.lineWidth = 2.1;
+            ctx.beginPath();
+            for (let i = 0; i <= 120; i++) {
+              const ti = (i / 120) * maxT;
+              const qi = p.ek0 * (1.0 - Math.exp(-2.0 * p.beta * ti));
+              const sx = toX(ti);
+              const sy = toY(qi);
+              if (i === 0) ctx.moveTo(sx, sy);
+              else ctx.lineTo(sx, sy);
+            }
+            ctx.stroke();
+
+            // 剩余动能 E_k(t) = E_k0 e^(-2βt) (琥珀金曲线)
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2.4;
+            ctx.beginPath();
+            for (let i = 0; i <= 120; i++) {
+              const ti = (i / 120) * maxT;
+              const eki = p.ek0 * Math.exp(-2.0 * p.beta * ti);
+              const sx = toX(ti);
+              const sy = toY(eki);
+              if (i === 0) ctx.moveTo(sx, sy);
+              else ctx.lineTo(sx, sy);
+            }
+            ctx.stroke();
+
+            // 当前动能圆点
+            const cx = toX(state.t);
+            const cy = toY(p.ek);
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 4.5, 0, TWO_PI);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+      }
+
+      // ==========================================================================
+      // 8. 交互绑定：滑块、倍速、相机切换、图表水平擦洗时间轴 t
+      // ==========================================================================
+      function bindChartScrubber(canvas, isPhaseXAxis = false) {
+        let dragging = false;
+
+        const scrubAtClientX = (clientX) => {
+          const rect = canvas.getBoundingClientRect();
+          const padLeft = 44;
+          const padRight = 16;
+          const plotW = Math.max(10, rect.width - padLeft - padRight);
+          const frac = Math.max(0.0, Math.min(1.0, (clientX - rect.left - padLeft) / plotW));
+          const maxT = getMaxTime();
+
+          if (isPhaseXAxis && state.chart3Mode === 'phase') {
+            // 相空间横轴为 x/x_max = 1 - exp(-β t) => t = -ln(1 - frac)/β
+            const p = getPhysics(state.t);
+            const safeFrac = Math.min(0.996, frac);
+            const tMapped = -Math.log(1.0 - safeFrac) / p.beta;
+            state.t = Math.max(0.0, Math.min(maxT, tMapped));
+          } else {
+            state.t = frac * maxT;
+          }
+
+          setPlaying(false);
+          const pNow = getPhysics(state.t);
+          if (state.chaseCam) {
+            state.camCenterX = pNow.x + 8.0;
+            state.camVelX = 0.0;
+          }
+          syncUI();
+        };
+
+        canvas.addEventListener('pointerdown', (e) => {
+          dragging = true;
+          canvas.setPointerCapture(e.pointerId);
+          scrubAtClientX(e.clientX);
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+          if (!dragging) return;
+          scrubAtClientX(e.clientX);
+        });
+
+        canvas.addEventListener('pointerup', (e) => {
+          dragging = false;
+          canvas.releasePointerCapture(e.pointerId);
+        });
+      }
+
+      massSlider.addEventListener('input', (e) => {
+        state.preset = 'custom';
+        state.m = parseFloat(e.target.value);
+        buildPresetsUI();
+        syncUI();
+      });
+
+      kSlider.addEventListener('input', (e) => {
+        state.preset = 'custom';
+        state.k = parseFloat(e.target.value);
+        buildPresetsUI();
+        syncUI();
+      });
+
+      v0Slider.addEventListener('input', (e) => {
+        state.preset = 'custom';
+        state.v0 = parseFloat(e.target.value);
+        buildPresetsUI();
+        syncUI();
+      });
+
+      timeSlider.addEventListener('input', (e) => {
+        state.t = parseFloat(e.target.value);
+        setPlaying(false);
+        const pNow = getPhysics(state.t);
+        if (state.chaseCam) {
+          state.camCenterX = pNow.x + 8.0;
+          state.camVelX = 0.0;
+        }
+        syncUI();
+      });
+
+      playPauseBtn.addEventListener('click', () => {
+        if (state.t >= getMaxTime() - 0.04 && !state.playing) {
+          resetSimulation();
+          return;
+        }
+        setPlaying(!state.playing);
+      });
+
+      resetBtn.addEventListener('click', () => {
+        resetSimulation();
+      });
+
+      speedBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.speedMult = parseFloat(btn.dataset.spd);
+          speedBtns.forEach((b) => b.classList.toggle('active', b === btn));
+        });
+      });
+
+      ghostToggle.addEventListener('change', (e) => { state.showGhost = e.target.checked; });
+      vectorToggle.addEventListener('change', (e) => { state.showVectors = e.target.checked; });
+      wakeToggle.addEventListener('change', (e) => { state.showWake = e.target.checked; });
+      chaseToggle.addEventListener('change', (e) => { setChaseCam(e.target.checked); });
+      hudCamBtn.addEventListener('click', () => { setChaseCam(!state.chaseCam); });
+
+      tabPills.forEach((pill) => {
+        pill.addEventListener('click', () => {
+          state.chart3Mode = pill.dataset.c3mode;
+          tabPills.forEach((p) => p.classList.toggle('active', p === pill));
+          if (state.chart3Mode === 'phase') {
+            chart3Title.innerHTML = '相空间轨迹 <i class="math-i">v</i>(<i class="math-i">x</i>)';
+            chart3FootLeft.innerHTML = '严格直线 <i class="math-i">v</i>(<i class="math-i">x</i>) = <i class="math-i">v</i><sub>0</sub> &minus; <i class="math-i">&beta;x</i>，斜率 &minus;<i class="math-i">k/m</i>';
+            chart3FootRight.textContent = '终点 (x_max, 0)';
+          } else {
+            chart3Title.innerHTML = '动能衰减与水体耗散 <i class="math-i">E</i><sub>k</sub>(<i class="math-i">t</i>)';
+            chart3FootLeft.innerHTML = '琥珀线剩余动能 <i class="math-i">E</i><sub>k0</sub><i class="math-i">e</i><sup>&minus;2&beta;t</sup> · 粉线累积耗散 <i class="math-i">Q</i>(<i class="math-i">t</i>)';
+            chart3FootRight.textContent = 'E_k(t) + Q(t) ≡ E_k0';
+          }
+          renderAllCharts();
+        });
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && document.activeElement.tagName !== 'BUTTON' && document.activeElement.tagName !== 'INPUT') {
+          e.preventDefault();
+          playPauseBtn.click();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        renderSimulationViewport();
+        renderAllCharts();
+      });
+
+      // ==========================================================================
+      // 9. 主动画循环 (critically-damped spring camera + 60fps 渲染)
+      // ==========================================================================
+      function animateLoop(timestamp) {
+        try {
+          if (state.lastTimestamp === null) {
+            state.lastTimestamp = timestamp;
+          }
+          const rawDt = Math.min(0.05, (timestamp - state.lastTimestamp) / 1000.0);
+          state.lastTimestamp = timestamp;
+          state.wallClock += rawDt;
+
+          if (state.playing) {
+            const simDt = rawDt * state.speedMult;
+            state.t += simDt;
+            const maxT = getMaxTime();
+            if (state.t >= maxT) {
+              state.t = maxT;
+              setPlaying(false);
+              playText.textContent = '重播';
+            }
+            const pNow = getPhysics(state.t);
+            updateFluidParticles(simDt, pNow);
+            syncUI();
+          }
+
+          // 临界阻尼弹簧相机追踪 (omega_n = 7.5 rad/s)
+          const pCur = getPhysics(state.t);
+          const targetCamX = state.chaseCam ? (pCur.x + 8.0) : (pCur.xmax * 0.54);
+          const omega = 7.5;
+          const errX = state.camCenterX - targetCamX;
+          const accelCam = -2.0 * omega * state.camVelX - omega * omega * errX;
+          state.camVelX += accelCam * rawDt;
+          state.camCenterX += state.camVelX * rawDt;
+
+          renderSimulationViewport();
+          renderAllCharts();
+        } catch (err) {
+          console.error('汽艇水阻力模拟渲染异常:', err);
+        }
+        requestAnimationFrame(animateLoop);
+      }
+
+      window.onload = function () {
+        initWebGLWater();
+        buildPresetsUI();
+        bindChartScrubber(vChart, false);
+        bindChartScrubber(xChart, false);
+        bindChartScrubber(thirdChart, true);
+        resetSimulation();
+        requestAnimationFrame(animateLoop);
+      };
+    })();
   </script>
 </body>
 </html>

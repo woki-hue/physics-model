@@ -1,0 +1,2179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>双滑块-弹簧-墙壁碰撞与质心运动实验室</title>
+  <style>
+    /* ==========================================================================
+       1. 深空实验室视觉设计令牌与基础重置
+       ========================================================================== */
+    :root {
+      --bg-deep: #070b14;
+      --bg-space: #0b1120;
+      --bg-card: #131c31;
+      --bg-card-inner: #0d1425;
+      --border-subtle: rgba(148, 163, 184, 0.16);
+      --border-accent: rgba(56, 189, 248, 0.4);
+
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --c-m1: #38bdf8;       /* 滑块 m1: 亮天蓝 */
+      --c-m2: #10b981;       /* 滑块 m2: 翡翠绿 */
+      --c-cm: #f59e0b;       /* 质心 CM: 琥珀金 */
+      --c-wall: #f43f5e;     /* 墙壁支持力: 玫瑰红 */
+      --c-spring-comp: #f97316; /* 弹簧压缩: 炽热橙 */
+      --c-spring-ext: #2dd4bf;  /* 弹簧拉伸: 青碧色 */
+      --c-energy: #a78bfa;   /* 总机械能: 紫罗兰 */
+
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 7px;
+      --shadow-card: 0 14px 36px -10px rgba(2, 6, 23, 0.86);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background-color: var(--bg-deep);
+      background-image:
+        radial-gradient(circle at 12% 0%, rgba(56, 189, 248, 0.12) 0%, transparent 42%),
+        radial-gradient(circle at 88% 6%, rgba(16, 185, 129, 0.09) 0%, transparent 44%);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .math-i {
+      font-family: "Times New Roman", Georgia, serif;
+      font-style: italic;
+    }
+
+    /* 数学分式与根式组件 */
+    .frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      margin: 0 2px;
+      font-size: 0.84em;
+      line-height: 1.05;
+    }
+    .frac > span:first-child {
+      border-bottom: 1px solid currentColor;
+      padding: 0 3px 1px;
+    }
+    .frac > span:last-child {
+      padding: 1px 3px 0;
+    }
+
+    .sqrt-wrap {
+      display: inline-flex;
+      align-items: center;
+      vertical-align: middle;
+    }
+    .sqrt-body {
+      border-top: 1px solid currentColor;
+      padding: 1px 2px 0;
+      margin-left: 1px;
+    }
+
+    /* ==========================================================================
+       2. 顶部标题栏与分段解析公式卡片
+       ========================================================================== */
+    .topbar {
+      background: rgba(11, 17, 32, 0.93);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .topbar-inner {
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 11px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(16, 185, 129, 0.18));
+      border: 1px solid rgba(56, 189, 248, 0.42);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--c-m1);
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.18);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.08rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .badge-tag {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.14);
+      color: var(--c-m1);
+      border: 1px solid rgba(56, 189, 248, 0.34);
+    }
+
+    .brand-sub {
+      font-size: 0.79rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* 顶部 4 个核心解析公式卡片 */
+    .formula-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .f-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 9px;
+      padding: 5px 11px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .f-box.accent-box {
+      border-color: rgba(245, 158, 11, 0.42);
+      background: linear-gradient(145deg, rgba(19, 28, 49, 0.96), rgba(45, 30, 14, 0.85));
+    }
+
+    .f-title {
+      font-size: 0.67rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .f-box.accent-box .f-title {
+      color: var(--c-cm);
+    }
+
+    .f-expr {
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: #f8fafc;
+      margin-top: 1px;
+    }
+
+    /* ==========================================================================
+       3. 主实验工作区双栏网格布局
+       ========================================================================== */
+    .workspace {
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 16px 20px 28px;
+      display: grid;
+      grid-template-columns: 386px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 1120px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .workspace {
+        padding: 12px 12px 24px;
+      }
+      .topbar-inner {
+        padding: 10px 12px;
+      }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 15px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot-led {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--c-m1);
+      box-shadow: 0 0 8px var(--c-m1);
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       4. 左侧控制面板与遥测数据卡片
+       ========================================================================== */
+    .left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .preset-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 14px;
+    }
+
+    .preset-btn {
+      width: 100%;
+      background: var(--bg-card-inner);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      color: var(--text-secondary);
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .preset-btn:hover {
+      border-color: rgba(56, 189, 248, 0.45);
+      color: #f8fafc;
+      background: #17233c;
+    }
+
+    .preset-btn.active {
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.17), rgba(16, 185, 129, 0.08));
+      border-color: var(--c-m1);
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 var(--c-m1);
+    }
+
+    .preset-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .preset-sub {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    .preset-pill {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--c-m1);
+      background: rgba(56, 189, 248, 0.11);
+      padding: 2px 7px;
+      border-radius: 5px;
+      flex-shrink: 0;
+    }
+
+    /* 参数滑块 */
+    .sliders-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .slider-card {
+      background: var(--bg-card-inner);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: var(--radius-md);
+      padding: 9px 11px;
+    }
+
+    .slider-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+      font-size: 0.8rem;
+    }
+
+    .slider-name {
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    .slider-badge {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--c-m1);
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 1px 7px;
+      border-radius: 5px;
+    }
+
+    .slider-badge.emerald {
+      color: var(--c-m2);
+      background: rgba(16, 185, 129, 0.11);
+      border-color: rgba(16, 185, 129, 0.26);
+    }
+
+    .slider-badge.gold {
+      color: var(--c-cm);
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.28);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--c-m1);
+      border: 2px solid #070b14;
+      box-shadow: 0 0 9px rgba(56, 189, 248, 0.65);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.16);
+    }
+
+    input[type="range"].emerald-range::-webkit-slider-thumb {
+      background: var(--c-m2);
+      box-shadow: 0 0 9px rgba(16, 185, 129, 0.65);
+    }
+
+    input[type="range"].gold-range::-webkit-slider-thumb {
+      background: var(--c-cm);
+      box-shadow: 0 0 9px rgba(245, 158, 11, 0.65);
+    }
+
+    .slider-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* 播放与重置控制栏 */
+    .btn-bar {
+      display: grid;
+      grid-template-columns: 1.15fr 0.95fr 1fr;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .ctrl-btn {
+      min-height: 37px;
+      padding: 0 9px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      background: #18233c;
+      color: var(--text-primary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .ctrl-btn:hover {
+      border-color: var(--c-m1);
+      background: #1f2e4d;
+    }
+
+    .ctrl-btn.primary {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      border-color: rgba(56, 189, 248, 0.55);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3);
+    }
+
+    .ctrl-btn.primary:hover {
+      filter: brightness(1.08);
+    }
+
+    .ctrl-btn.slow-on {
+      background: rgba(245, 158, 11, 0.18);
+      border-color: var(--c-cm);
+      color: #fde68a;
+    }
+
+    /* 可视化图层开关 */
+    .switches-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.79rem;
+      color: #cbd5e1;
+      cursor: pointer;
+      user-select: none;
+      padding: 2px 0;
+    }
+
+    .toggle-pill {
+      position: relative;
+      width: 38px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .toggle-pill input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: #1e293b;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 999px;
+      transition: 0.2s;
+    }
+
+    .toggle-slider::after {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 2px;
+      top: 2px;
+      border-radius: 50%;
+      background: #94a3b8;
+      transition: 0.2s;
+    }
+
+    .toggle-pill input:checked + .toggle-slider {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: var(--c-m1);
+    }
+
+    .toggle-pill input:checked + .toggle-slider::after {
+      transform: translateX(18px);
+      background: var(--c-m1);
+    }
+
+    /* 实时物理量数字面板 */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .tele-card {
+      background: var(--bg-card-inner);
+      border: 1px solid rgba(148, 163, 184, 0.13);
+      border-radius: var(--radius-md);
+      padding: 9px 11px;
+    }
+
+    .tele-card.span-2 {
+      grid-column: span 2;
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.12), rgba(56, 189, 248, 0.08));
+      border-color: rgba(244, 63, 94, 0.34);
+    }
+
+    .tele-card.span-2.phase2 {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(245, 158, 11, 0.08));
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    .tele-k {
+      font-size: 0.71rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tele-v {
+      font-size: 1.0rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-top: 2px;
+    }
+
+    .tele-sub {
+      font-size: 0.69rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ==========================================================================
+       5. 右侧主运动视口与底部三联同步数据图表
+       ========================================================================== */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .legend-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+    }
+
+    .leg-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .leg-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .leg-dash {
+      width: 14px;
+      height: 0;
+      border-top: 2px dashed #f59e0b;
+      display: inline-block;
+    }
+
+    /* 视口顶部醒目阶段指示横幅 */
+    .phase-banner {
+      border-radius: var(--radius-md);
+      padding: 9px 14px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.83rem;
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+
+    .phase-banner.phase-1 {
+      background: linear-gradient(90deg, rgba(244, 63, 94, 0.2), rgba(249, 115, 22, 0.14));
+      border: 1px solid rgba(244, 63, 94, 0.48);
+      color: #fecdd3;
+    }
+
+    .phase-banner.phase-2 {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.2), rgba(56, 189, 248, 0.14));
+      border: 1px solid rgba(16, 185, 129, 0.48);
+      color: #a7f3d0;
+    }
+
+    .phase-tag {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 5px;
+      background: rgba(7, 11, 20, 0.65);
+    }
+
+    .canvas-shell {
+      position: relative;
+      width: 100%;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: #060a14;
+    }
+
+    #motionCanvas {
+      display: block;
+      width: 100%;
+      height: 400px;
+    }
+
+    @media (max-width: 640px) {
+      #motionCanvas {
+        height: 325px;
+      }
+    }
+
+    /* 底部三联同步图表 */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 1260px) {
+      .charts-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-canvas {
+      display: block;
+      width: 100%;
+      height: 235px;
+    }
+
+    .chart-caption {
+      margin-top: 7px;
+      font-size: 0.71rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部标题栏与分段解析公式卡片 -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="4" x2="3" y2="20" />
+            <rect x="4" y="9" width="5" height="6" rx="1" />
+            <path d="M9 12h2l1-3 2 6 2-6 1 3h1" />
+            <rect x="18" y="8" width="5" height="8" rx="1" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            <span>双滑块-弹簧-墙壁碰撞与质心运动实验室</span>
+            <span class="badge-tag">经典力学双阶段解析解 · 动量与能量转化</span>
+          </div>
+          <div class="brand-sub">
+            光滑水平面 · 弹簧原长 <i class="math-i">l</i> = 1.0 m · 初始压缩至 <i class="math-i">&eta;l</i> 由静止释放 · 观察靠墙外力加速与离墙质心匀速运动
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 个核心解析公式卡片 -->
+      <div class="formula-bar">
+        <div class="f-box" title="阶段 I 结束、弹簧首次恢复原长的离墙时刻">
+          <div class="f-title">离墙时刻 <i class="math-i">t</i><sub>1</sub></div>
+          <div class="f-expr">
+            <i class="math-i">t</i><sub>1</sub> = <span class="frac"><span>&pi;</span><span>2</span></span><span class="sqrt-wrap">&radic;<span class="sqrt-body"><span class="frac"><span><i class="math-i">m</i><sub>2</sub></span><span><i class="math-i">k</i></span></span></span></span>
+          </div>
+        </div>
+
+        <div class="f-box" title="m2 在 t = t1 时刻获得的离墙初速度">
+          <div class="f-title">离墙初速 <i class="math-i">v</i><sub>20</sub></div>
+          <div class="f-expr">
+            <i class="math-i">v</i><sub>20</sub> = &Delta;<i class="math-i">x</i><sub>0</sub><span class="sqrt-wrap">&radic;<span class="sqrt-body"><span class="frac"><span><i class="math-i">k</i></span><span><i class="math-i">m</i><sub>2</sub></span></span></span></span>
+          </div>
+        </div>
+
+        <div class="f-box accent-box" title="离墙后系统总动量守恒，质心保持恒定速度前进">
+          <div class="f-title">质心恒速 <i class="math-i">v</i><sub>cm</sub> (<i class="math-i">t</i> &ge; <i class="math-i">t</i><sub>1</sub>)</div>
+          <div class="f-expr">
+            <i class="math-i">v</i><sub>cm</sub> = <span class="frac"><span><i class="math-i">m</i><sub>2</sub></span><span><i class="math-i">m</i><sub>1</sub> + <i class="math-i">m</i><sub>2</sub></span></span> <i class="math-i">v</i><sub>20</sub>
+          </div>
+        </div>
+
+        <div class="f-box" title="离墙后双体相对质心振动的最大伸长/压缩形变量">
+          <div class="f-title">最大形变 &Delta;<i class="math-i">x</i><sub>max</sub></div>
+          <div class="f-expr">
+            &Delta;<i class="math-i">x</i><sub>max</sub> = &Delta;<i class="math-i">x</i><sub>0</sub><span class="sqrt-wrap">&radic;<span class="sqrt-body"><span class="frac"><span><i class="math-i">m</i><sub>1</sub></span><span><i class="math-i">m</i><sub>1</sub> + <i class="math-i">m</i><sub>2</sub></span></span></span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主实验工作区 -->
+  <main class="workspace">
+    <!-- 左侧控制与遥测面板 -->
+    <aside class="left-col">
+      <!-- 参数与预设面板 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="dot-led"></span>
+            <span>物理工况预设与系统参数</span>
+          </div>
+          <span class="mono" style="font-size:0.71rem;color:var(--c-m1);" id="muBadge">&mu; = 1.00 kg</span>
+        </div>
+
+        <!-- 3 种典型物理工况预设 -->
+        <div class="preset-grid" id="presetGroup">
+          <button type="button" class="preset-btn active" data-preset="equalMass">
+            <div>
+              <div class="preset-title">等质量交替 (<i class="math-i">m</i><sub>1</sub> = <i class="math-i">m</i><sub>2</sub>)</div>
+              <div class="preset-sub mono">m₁=2.0kg, m₂=2.0kg, k=80N/m, &eta;=0.50</div>
+            </div>
+            <span class="preset-pill mono">尺蠖式交替</span>
+          </button>
+
+          <button type="button" class="preset-btn" data-preset="heavyWall">
+            <div>
+              <div class="preset-title">重墙块反弹 (<i class="math-i">m</i><sub>1</sub> &gt; <i class="math-i">m</i><sub>2</sub>)</div>
+              <div class="preset-sub mono">m₁=4.5kg, m₂=1.0kg, k=100N/m, &eta;=0.50</div>
+            </div>
+            <span class="preset-pill mono">前块高频往复</span>
+          </button>
+
+          <button type="button" class="preset-btn" data-preset="lightFront">
+            <div>
+              <div class="preset-title">轻前块推进 (<i class="math-i">m</i><sub>1</sub> &lt; <i class="math-i">m</i><sub>2</sub>)</div>
+              <div class="preset-sub mono">m₁=0.8kg, m₂=3.5kg, k=80N/m, &eta;=0.50</div>
+            </div>
+            <span class="preset-pill mono">高质心推进</span>
+          </button>
+        </div>
+
+        <!-- 4 个物理参数滑块 + 时间轴手动拖动条 -->
+        <div class="sliders-stack">
+          <div class="slider-card">
+            <div class="slider-top">
+              <label class="slider-name" for="m1Slider">靠墙物块质量 <i class="math-i">m</i><sub>1</sub></label>
+              <span class="slider-badge mono" id="m1Val">2.0 kg</span>
+            </div>
+            <input type="range" id="m1Slider" min="0.5" max="5.0" step="0.1" value="2.0" />
+            <div class="slider-ticks mono"><span>0.5 kg</span><span>2.5 kg</span><span>5.0 kg</span></div>
+          </div>
+
+          <div class="slider-card">
+            <div class="slider-top">
+              <label class="slider-name" for="m2Slider">右侧释放块质量 <i class="math-i">m</i><sub>2</sub></label>
+              <span class="slider-badge emerald mono" id="m2Val">2.0 kg</span>
+            </div>
+            <input type="range" id="m2Slider" class="emerald-range" min="0.5" max="5.0" step="0.1" value="2.0" />
+            <div class="slider-ticks mono"><span>0.5 kg</span><span>2.5 kg</span><span>5.0 kg</span></div>
+          </div>
+
+          <div class="slider-card">
+            <div class="slider-top">
+              <label class="slider-name" for="kSlider">弹簧劲度系数 <i class="math-i">k</i></label>
+              <span class="slider-badge mono" id="kVal">80 N/m</span>
+            </div>
+            <input type="range" id="kSlider" min="20" max="200" step="5" value="80" />
+            <div class="slider-ticks mono"><span>20 N/m</span><span>110 N/m</span><span>200 N/m</span></div>
+          </div>
+
+          <div class="slider-card">
+            <div class="slider-top">
+              <label class="slider-name" for="etaSlider">初始压缩长度比 <i class="math-i">&eta;</i> = <i class="math-i">l</i><sub>0</sub> / <i class="math-i">l</i></label>
+              <span class="slider-badge mono" id="etaVal">0.50 (压缩 &Delta;x₀ = 0.50 m)</span>
+            </div>
+            <input type="range" id="etaSlider" min="0.25" max="0.85" step="0.01" value="0.50" />
+            <div class="slider-ticks mono"><span>0.25 l</span><span>0.50 l (题设1/2)</span><span>0.85 l</span></div>
+          </div>
+
+          <div class="slider-card">
+            <div class="slider-top">
+              <label class="slider-name" for="timeSlider">时间轴手动拖动 <i class="math-i">t</i></label>
+              <span class="slider-badge gold mono" id="timeVal">0.000 s / 1.999 s</span>
+            </div>
+            <input type="range" id="timeSlider" class="gold-range" min="0" max="1000" step="1" value="0" />
+            <div class="slider-ticks mono">
+              <span>0</span>
+              <span id="tickT1">离墙 t₁</span>
+              <span id="tickMid">t₁ + T₂</span>
+              <span id="tickEnd">终点</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 播放 / 重置 / 慢放控制按钮 -->
+        <div class="btn-bar">
+          <button type="button" class="ctrl-btn primary" id="playPauseBtn">
+            <span id="playIcon">❚❚</span>
+            <span id="playText">暂停</span>
+          </button>
+          <button type="button" class="ctrl-btn" id="resetBtn">
+            <span>↺</span>
+            <span>重置 t=0</span>
+          </button>
+          <button type="button" class="ctrl-btn" id="slowBtn">
+            <span>⏱</span>
+            <span id="slowText">0.5x 慢放</span>
+          </button>
+        </div>
+
+        <!-- 可视化图层开关 -->
+        <div class="switches-box">
+          <label class="switch-row">
+            <span>显示系统质心 (CM) 与匀速参考线</span>
+            <span class="toggle-pill">
+              <input type="checkbox" id="toggleCm" checked />
+              <span class="toggle-slider"></span>
+            </span>
+          </label>
+
+          <label class="switch-row">
+            <span>显示弹簧原长参考标记 (<i class="math-i">x</i><sub>1</sub> + <i class="math-i">l</i>)</span>
+            <span class="toggle-pill">
+              <input type="checkbox" id="toggleRestLen" checked />
+              <span class="toggle-slider"></span>
+            </span>
+          </label>
+
+          <label class="switch-row">
+            <span>显示速度与弹力/墙支持力矢量箭头</span>
+            <span class="toggle-pill">
+              <input type="checkbox" id="toggleVectors" checked />
+              <span class="toggle-slider"></span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <!-- 实时物理量数字面板 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="dot-led" style="background:var(--c-cm);box-shadow:0 0 8px var(--c-cm);"></span>
+            <span>实时物理量与守恒态遥测</span>
+          </div>
+          <span class="mono" style="font-size:0.71rem;color:var(--c-energy);" id="etotBadge">E_tot = 10.00 J</span>
+        </div>
+
+        <div class="telemetry-grid">
+          <div class="tele-card span-2" id="phaseTelemetryCard">
+            <div class="tele-k">
+              <span>当前运动阶段与外力状态</span>
+              <span class="mono" style="font-weight:700;" id="statPhaseShort">阶段 I · 靠墙加速</span>
+            </div>
+            <div class="tele-v mono" id="statWallForce">墙壁支持力 N_wall = 40.00 N</div>
+            <div class="tele-sub mono" id="statPhaseDetail">m₁ 静止靠墙 (x₁=0)，墙壁冲量持续注入系统动量</div>
+          </div>
+
+          <div class="tele-card">
+            <div class="tele-k"><span>离墙时刻 <i class="math-i">t</i><sub>1</sub></span></div>
+            <div class="tele-v mono" style="color:var(--c-m1);" id="statT1">0.248 s</div>
+            <div class="tele-sub mono" id="statV20">离墙初速 v₂₀ = 3.16 m/s</div>
+          </div>
+
+          <div class="tele-card">
+            <div class="tele-k"><span>质心速度 <i class="math-i">v</i><sub>cm</sub></span></div>
+            <div class="tele-v mono" style="color:var(--c-cm);" id="statVcm">0.00 m/s</div>
+            <div class="tele-sub mono" id="statVcmFinal">离墙后恒定: 1.58 m/s</div>
+          </div>
+
+          <div class="tele-card">
+            <div class="tele-k"><span>最大形变量 &Delta;<i class="math-i">x</i><sub>max</sub></span></div>
+            <div class="tele-v mono" style="color:var(--c-spring-ext);" id="statDxMax">0.354 m</div>
+            <div class="tele-sub mono" id="statDxInst">当前形变: -0.500 m</div>
+          </div>
+
+          <div class="tele-card">
+            <div class="tele-k"><span>系统总动量 <i class="math-i">P</i>(<i class="math-i">t</i>)</span></div>
+            <div class="tele-v mono" style="color:var(--c-wall);" id="statMomentum">0.00 N·s</div>
+            <div class="tele-sub mono" id="statMomentumFinal">离墙守恒值: 6.32 N·s</div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 右侧主运动视口与底部三联同步图表 -->
+    <section class="right-col">
+      <!-- 主运动视口卡片 -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="dot-led" style="background:var(--c-m2);box-shadow:0 0 8px var(--c-m2);"></span>
+            <span>水平导轨滑块-弹簧-墙壁实时物理视口</span>
+          </div>
+          <div class="legend-strip">
+            <span class="leg-item"><i class="leg-dot" style="background:#38bdf8;"></i>物块 <i class="math-i">m</i><sub>1</sub></span>
+            <span class="leg-item"><i class="leg-dot" style="background:#10b981;"></i>物块 <i class="math-i">m</i><sub>2</sub></span>
+            <span class="leg-item"><i class="leg-dash"></i>系统质心 CM</span>
+            <span class="leg-item"><i class="leg-dot" style="background:#f43f5e;"></i>墙支持力 <i class="math-i">N</i><sub>wall</sub></span>
+            <span class="leg-item"><i class="leg-dot" style="background:#f97316;"></i>弹簧弹力 <i class="math-i">F</i><sub>s</sub></span>
+          </div>
+        </div>
+
+        <!-- 顶部醒目当前阶段指示横幅 -->
+        <div class="phase-banner phase-1" id="phaseBanner">
+          <span id="phaseBannerText">阶段 I · 靠墙阶段：墙施外力 N_wall &gt; 0 → 系统动量增加，机械能守恒</span>
+          <span class="phase-tag mono" id="phaseBannerTimer">t = 0.000 s (t₁ = 0.248 s)</span>
+        </div>
+
+        <div class="canvas-shell">
+          <canvas id="motionCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- 底部三联同步数据图表 -->
+      <div class="charts-grid">
+        <!-- 图表 1：速度-时间曲线 v1(t), v2(t), v_cm(t) -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="dot-led" style="background:var(--c-m1);"></span>
+              <span>速度 - 时间曲线 <i class="math-i">v</i><sub>1</sub>, <i class="math-i">v</i><sub>2</sub> &amp; <i class="math-i">v</i><sub>cm</sub></span>
+            </div>
+            <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">虚线 t = t₁</span>
+          </div>
+          <div class="canvas-shell">
+            <canvas id="velChartCanvas" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-caption">
+            <span>蓝线 v₁ · 绿线 v₂ · 金虚线质心速度 v_cm（t &ge; t₁ 后水平恒定）</span>
+            <span class="mono" style="color:var(--c-cm);" id="velChartNote">v_cm = 1.58 m/s</span>
+          </div>
+        </div>
+
+        <!-- 图表 2：系统总动量 P(t) = m1*v1 + m2*v2 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="dot-led" style="background:var(--c-wall);box-shadow:0 0 8px var(--c-wall);"></span>
+              <span>系统总动量 <i class="math-i">P</i>(<i class="math-i">t</i>) = <i class="math-i">m</i><sub>1</sub><i class="math-i">v</i><sub>1</sub> + <i class="math-i">m</i><sub>2</sub><i class="math-i">v</i><sub>2</sub></span>
+            </div>
+            <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">t &ge; t₁ 严格守恒</span>
+          </div>
+          <div class="canvas-shell">
+            <canvas id="momChartCanvas" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-caption">
+            <span>靠墙阶段因墙壁冲量 sin(&omega;₁t) 上升，离墙瞬间达 P₀ 后保持水平</span>
+            <span class="mono" style="color:var(--c-wall);" id="momChartNote">P₀ = 6.32 N·s</span>
+          </div>
+        </div>
+
+        <!-- 图表 3：能量转化曲线 Ek1, Ek2, Ep 与 E_total -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="dot-led" style="background:var(--c-energy);box-shadow:0 0 8px var(--c-energy);"></span>
+              <span>机械能转化 <i class="math-i">E</i><sub>k1</sub>, <i class="math-i">E</i><sub>k2</sub>, <i class="math-i">E</i><sub>p</sub> &amp; <i class="math-i">E</i><sub>tot</sub></span>
+            </div>
+            <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">全程机械能守恒</span>
+          </div>
+          <div class="canvas-shell">
+            <canvas id="energyChartCanvas" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-caption">
+            <span>蓝 Ek1 · 绿 Ek2 · 橙 Ep · 紫虚线总机械能 E_tot 全程恒定不变</span>
+            <span class="mono" style="color:var(--c-energy);" id="energyChartNote">E_tot = 10.00 J</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /**
+     * ============================================================================
+     * 双滑块-弹簧-墙壁碰撞与质心运动实验室
+     * 严格分段解析物理引擎与自适应视口渲染系统
+     * ============================================================================
+     */
+    (function () {
+      'use strict';
+
+      // ==========================================================================
+      // 1. 仿真状态与典型物理工况预设
+      // ==========================================================================
+      const state = {
+        m1: 2.0,              // 靠墙物块质量 (kg, 0.5 ~ 5.0)
+        m2: 2.0,              // 右侧释放物块质量 (kg, 0.5 ~ 5.0)
+        k: 80.0,              // 弹簧劲度系数 (N/m, 20 ~ 200)
+        eta: 0.50,            // 初始压缩长度比 l0 / l (0.25 ~ 0.85, 默认 0.50)
+        l: 1.0,               // 弹簧原长 l = 1.0 m
+        t: 0.0,               // 当前仿真时间 (s)
+        isPlaying: true,      // 播放状态
+        slowMo: false,        // 慢动作开关 (0.5x)
+        showCm: true,         // 显示系统质心 (CM) 与匀速参考线
+        showRestLen: true,    // 显示弹簧原长参考标记 (x1 + l)
+        showVectors: true,    // 显示速度与弹力/墙支持力矢量箭头
+        lastFrameTime: null
+      };
+
+      const PRESETS = {
+        equalMass:  { m1: 2.0, m2: 2.0, k: 80.0,  eta: 0.50 },
+        heavyWall:  { m1: 4.5, m2: 1.0, k: 100.0, eta: 0.50 },
+        lightFront: { m1: 0.8, m2: 3.5, k: 80.0,  eta: 0.50 }
+      };
+
+      // ==========================================================================
+      // 2. 分段解析物理引擎（Stage I 靠墙加速 + Stage II 离墙双体耦合振动）
+      // ==========================================================================
+      function getSystemConstants() {
+        const { m1, m2, k, eta, l } = state;
+        const M = m1 + m2;
+        const dx0 = (1.0 - eta) * l; // 初始压缩量 Δx0
+
+        // 阶段 I：仅 m2 振动，m1 靠墙静止
+        const omega1 = Math.sqrt(k / m2);
+        const t1 = (Math.PI * 0.5) / omega1;
+        const v20 = dx0 * omega1;
+        const P0 = m2 * v20;
+
+        // 阶段 II：系统脱离墙壁，总动量守恒，双体相对质心简谐振动
+        const mu = (m1 * m2) / M;
+        const omega2 = Math.sqrt(k / mu);
+        const T2 = (2.0 * Math.PI) / omega2;
+        const vCmFinal = (m2 / M) * v20;
+        const dxMax = dx0 * Math.sqrt(m1 / M); // 最大伸长/压缩形变量 A2
+
+        // 总机械能（全程守恒，因为静止墙壁支持力不做功）
+        const Etotal = 0.5 * k * dx0 * dx0;
+
+        // 完整仿真观察时长：靠墙阶段 + 2.5 个离墙相对振动周期
+        const tMax = t1 + 2.5 * T2;
+
+        return {
+          m1, m2, M, k, eta, l, dx0,
+          omega1, t1, v20, P0,
+          mu, omega2, T2, vCmFinal, dxMax,
+          Etotal, tMax
+        };
+      }
+
+      /**
+       * 计算任意时刻 t >= 0 的全部精确物理状态
+       */
+      function evaluateAtTime(t, sys) {
+        const { m1, m2, M, k, l, dx0, omega1, t1, v20, P0, omega2, vCmFinal, dxMax, Etotal } = sys;
+
+        let isPhase1 = (t <= t1);
+        let x1, x2, v1, v2, xCm, vCm, wallForce, deformation, springForceOn2;
+
+        if (isPhase1) {
+          // 阶段 I（0 <= t <= t1）
+          const phase = omega1 * t;
+          const cosP = Math.cos(phase);
+          const sinP = Math.sin(phase);
+
+          x1 = 0.0;
+          v1 = 0.0;
+          x2 = l - dx0 * cosP;
+          v2 = dx0 * omega1 * sinP;
+
+          xCm = (m2 * x2) / M;
+          vCm = (m2 * v2) / M;
+
+          // 弹簧形变（相对原长 l）：负数表示压缩
+          deformation = x2 - x1 - l; // = -dx0 * cos(ω1 t)
+          // 弹簧作用在 m2 上的力（向右为正）：F_s2 = -k * deformation = +k * dx0 * cos(ω1 t)
+          springForceOn2 = -k * deformation;
+          // 墙壁对 m1 向右的支持力平衡弹簧对 m1 向左的推力
+          wallForce = Math.max(0.0, springForceOn2);
+        } else {
+          // 阶段 II（t > t1，令 τ = t - t1）
+          const tau = t - t1;
+          const phase2 = omega2 * tau;
+          const sinP2 = Math.sin(phase2);
+          const cosP2 = Math.cos(phase2);
+
+          // 弹簧相对原长形变量 u(τ) = A2 * sin(ω2 τ)
+          deformation = dxMax * sinP2;
+
+          // 质心位置与恒定速度
+          xCm = (m2 * l) / M + vCmFinal * tau;
+          vCm = vCmFinal;
+
+          // 两物块精确坐标与速度
+          x1 = xCm - (m2 / M) * (l + deformation);
+          x2 = xCm + (m1 / M) * (l + deformation);
+
+          v1 = vCmFinal * (1.0 - cosP2);
+          v2 = vCmFinal + (m1 / M) * v20 * cosP2;
+
+          wallForce = 0.0;
+          // 弹簧作用在 m2 上的弹力（向左为负）：-k * u(τ)
+          springForceOn2 = -k * deformation;
+        }
+
+        const P = m1 * v1 + m2 * v2;
+        const Ek1 = 0.5 * m1 * v1 * v1;
+        const Ek2 = 0.5 * m2 * v2 * v2;
+        const Ep = 0.5 * k * deformation * deformation;
+
+        return {
+          t, isPhase1,
+          x1, x2, v1, v2, xCm, vCm,
+          wallForce, deformation, springForceOn2,
+          P, P0, Ek1, Ek2, Ep, Etotal
+        };
+      }
+
+      // ==========================================================================
+      // 3. DOM 节点引用绑定
+      // ==========================================================================
+      const motionCanvas = document.getElementById('motionCanvas');
+      const velChartCanvas = document.getElementById('velChartCanvas');
+      const momChartCanvas = document.getElementById('momChartCanvas');
+      const energyChartCanvas = document.getElementById('energyChartCanvas');
+
+      const m1Slider = document.getElementById('m1Slider');
+      const m2Slider = document.getElementById('m2Slider');
+      const kSlider = document.getElementById('kSlider');
+      const etaSlider = document.getElementById('etaSlider');
+      const timeSlider = document.getElementById('timeSlider');
+
+      const m1Val = document.getElementById('m1Val');
+      const m2Val = document.getElementById('m2Val');
+      const kVal = document.getElementById('kVal');
+      const etaVal = document.getElementById('etaVal');
+      const timeVal = document.getElementById('timeVal');
+      const tickT1 = document.getElementById('tickT1');
+      const tickMid = document.getElementById('tickMid');
+      const tickEnd = document.getElementById('tickEnd');
+
+      const playPauseBtn = document.getElementById('playPauseBtn');
+      const playIcon = document.getElementById('playIcon');
+      const playText = document.getElementById('playText');
+      const resetBtn = document.getElementById('resetBtn');
+      const slowBtn = document.getElementById('slowBtn');
+      const slowText = document.getElementById('slowText');
+      const presetBtns = document.querySelectorAll('.preset-btn');
+
+      const toggleCm = document.getElementById('toggleCm');
+      const toggleRestLen = document.getElementById('toggleRestLen');
+      const toggleVectors = document.getElementById('toggleVectors');
+
+      // 遥测与阶段横幅节点
+      const muBadge = document.getElementById('muBadge');
+      const etotBadge = document.getElementById('etotBadge');
+      const phaseTelemetryCard = document.getElementById('phaseTelemetryCard');
+      const statPhaseShort = document.getElementById('statPhaseShort');
+      const statWallForce = document.getElementById('statWallForce');
+      const statPhaseDetail = document.getElementById('statPhaseDetail');
+      const statT1 = document.getElementById('statT1');
+      const statV20 = document.getElementById('statV20');
+      const statVcm = document.getElementById('statVcm');
+      const statVcmFinal = document.getElementById('statVcmFinal');
+      const statDxMax = document.getElementById('statDxMax');
+      const statDxInst = document.getElementById('statDxInst');
+      const statMomentum = document.getElementById('statMomentum');
+      const statMomentumFinal = document.getElementById('statMomentumFinal');
+
+      const phaseBanner = document.getElementById('phaseBanner');
+      const phaseBannerText = document.getElementById('phaseBannerText');
+      const phaseBannerTimer = document.getElementById('phaseBannerTimer');
+
+      const velChartNote = document.getElementById('velChartNote');
+      const momChartNote = document.getElementById('momChartNote');
+      const energyChartNote = document.getElementById('energyChartNote');
+
+      // ==========================================================================
+      // 4. Canvas 高分屏适配与通用矢量绘图函数
+      // ==========================================================================
+      function setupHiDPICanvas(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(10, rect.width);
+        const h = Math.max(10, rect.height);
+        const targetW = Math.round(w * dpr);
+        const targetH = Math.round(h * dpr);
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+        }
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, w, h };
+      }
+
+      function drawRoundRect(ctx, x, y, w, h, r) {
+        const rad = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rad, y);
+        ctx.lineTo(x + w - rad, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+        ctx.lineTo(x + w, y + h - rad);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+        ctx.lineTo(x + rad, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+        ctx.lineTo(x, y + rad);
+        ctx.quadraticCurveTo(x, y, x + rad, y);
+        ctx.closePath();
+      }
+
+      function computeNiceStep(range, targetTicks) {
+        if (range <= 0) return 1;
+        const rough = range / targetTicks;
+        const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+        const norm = rough / mag;
+        let nice = 1;
+        if (norm <= 1) nice = 1;
+        else if (norm <= 2) nice = 2;
+        else if (norm <= 2.5) nice = 2.5;
+        else if (norm <= 5) nice = 5;
+        else nice = 10;
+        return nice * mag;
+      }
+
+      function drawHorizontalVector(ctx, x1, y, dxPx, color, label, placeAbove = true) {
+        if (Math.abs(dxPx) < 4) return;
+        const x2 = x1 + dxPx;
+        const dir = dxPx >= 0 ? 1 : -1;
+        const head = Math.min(10, Math.max(6, Math.abs(dxPx) * 0.25));
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y);
+        ctx.lineTo(x2 - dir * head * 0.65, y);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x2, y);
+        ctx.lineTo(x2 - dir * head, y - head * 0.52);
+        ctx.lineTo(x2 - dir * head, y + head * 0.52);
+        ctx.closePath();
+        ctx.fill();
+
+        if (label) {
+          ctx.font = '600 10px ui-monospace, SFMono-Regular, monospace';
+          const tw = ctx.measureText(label).width + 10;
+          const th = 16;
+          const lx = x2 + (dir > 0 ? 5 : (-tw - 5));
+          const ly = placeAbove ? (y - th - 3) : (y + 3);
+
+          ctx.fillStyle = 'rgba(7, 11, 20, 0.88)';
+          drawRoundRect(ctx, lx, ly, tw, th, 4);
+          ctx.fill();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.fillStyle = color;
+          ctx.textAlign = 'left';
+          ctx.fillText(label, lx + 5, ly + 11.5);
+        }
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 5. 右侧主运动视口渲染 (motionCanvas)
+      // ==========================================================================
+      function renderMotionViewport(sys, inst) {
+        const { ctx, w, h } = setupHiDPICanvas(motionCanvas);
+        const { m1, m2, l, dx0, k, v20, vCmFinal } = sys;
+        const { x1, x2, v1, v2, xCm, vCm, wallForce, deformation, springForceOn2, isPhase1 } = inst;
+
+        // 1. 深空实验室背景渐变
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+        bgGrad.addColorStop(0.0, '#050914');
+        bgGrad.addColorStop(0.68, '#0b1326');
+        bgGrad.addColorStop(1.0, '#111d36');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // 2. 自适应跟随摄像机：保证滑块在长时间向右运动后依然完整留在视野中
+        // 计算物理尺度：1 米对应多少像素
+        const minSpanMeters = Math.max(2.6, l * 2.4 + dx0);
+        const pxPerMeter = Math.min(230, Math.max(120, (w - 110) / minSpanMeters));
+        const visibleMeters = (w - 80) / pxPerMeter;
+
+        // 摄像机左边缘世界坐标 camLeftMeters：
+        // 初始时刻紧贴左墙 (-0.25m)，当系统质心向右移动超过屏幕 45% 处时平滑跟随
+        const targetCenterMeters = xCm + 0.15 * l;
+        const camLeftMeters = Math.max(-0.24, targetCenterMeters - visibleMeters * 0.46);
+        const toScreenX = (worldMeters) => 46 + (worldMeters - camLeftMeters) * pxPerMeter;
+
+        const floorY = Math.round(h * 0.68);
+
+        // 3. 光滑水平导轨与带世界坐标刻度尺的地面
+        renderSmoothTrackAndRuler(ctx, w, h, floorY, camLeftMeters, visibleMeters, pxPerMeter, toScreenX);
+
+        // 4. 左侧刚性墙壁 (位置 x = 0) 或 离墙距离指示器
+        const wallScreenX = toScreenX(0);
+        if (wallScreenX > -30) {
+          renderRigidWall(ctx, wallScreenX, floorY, wallForce, isPhase1);
+        } else {
+          // 当摄像机已向右跟随、左墙移出视野时，在左侧显示距离原点的精确物理距离
+          ctx.save();
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+          drawRoundRect(ctx, 12, floorY - 126, 152, 24, 6);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.fillStyle = '#7dd3fc';
+          ctx.font = '600 10.5px ui-monospace, monospace';
+          ctx.textAlign = 'left';
+          ctx.fillText(`◀ 距左墙 x₁ = ${x1.toFixed(2)} m`, 20, floorY - 110);
+          ctx.restore();
+        }
+
+        // 5. 计算两物块屏幕几何尺寸与连接点
+        const block1W = 54 + ((m1 - 0.5) / 4.5) * 24;
+        const block1H = 44 + ((m1 - 0.5) / 4.5) * 18;
+        const block2W = 54 + ((m2 - 0.5) / 4.5) * 24;
+        const block2H = 44 + ((m2 - 0.5) / 4.5) * 18;
+
+        // 物理约定：x1 为 m1 右端（或质心参考，此处令 x1=0 时 m1 左端贴墙，弹簧左端接 m1 右侧，右端接 m2 左侧）
+        // 为使弹簧长度严格对应物理坐标差 (x2 - x1)，令 m1 右边缘在 toScreenX(x1)，m2 左边缘在 toScreenX(x2)！
+        // 当 x1 = 0 时，墙面位于 m1 左边缘，即 wallScreenX = toScreenX(0) - block1W！
+        // 让我们重新校准墙面位置为 toScreenX(0) - block1W，这样：
+        // - t=0 时 x1=0，m1 左边缘严格贴紧墙面，右边缘在 toScreenX(0)
+        // - m2 左边缘在 toScreenX(x2)，弹簧两端间距严格等于 (x2 - x1) * pxPerMeter！
+        const actualWallX = toScreenX(0) - block1W;
+        if (wallScreenX <= -30 && actualWallX > -30) {
+          // 若墙面刚进入边缘则补绘
+          renderRigidWall(ctx, actualWallX, floorY, wallForce, isPhase1);
+        } else if (wallScreenX > -30) {
+          // 用校准后的 actualWallX 覆盖重绘墙面，确保零缝隙贴合
+          ctx.clearRect(0, 0, actualWallX + 2, floorY + 2);
+          ctx.fillStyle = bgGrad;
+          ctx.fillRect(0, 0, actualWallX + 2, floorY + 2);
+          renderRigidWall(ctx, actualWallX, floorY, wallForce, isPhase1);
+        }
+
+        const b1RightX = toScreenX(x1);
+        const b1LeftX = b1RightX - block1W;
+        const b1TopY = floorY - block1H;
+
+        const b2LeftX = toScreenX(x2);
+        const b2RightX = b2LeftX + block2W;
+        const b2TopY = floorY - block2H;
+
+        // 6. 弹簧原长参考标记 (x1 + l)
+        if (state.showRestLen) {
+          const restScreenX = toScreenX(x1 + l);
+          ctx.save();
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(restScreenX, floorY - 115);
+          ctx.lineTo(restScreenX, floorY);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '600 10px ui-monospace, monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('原长位置 (x₁ + l)', restScreenX, floorY - 121);
+          ctx.restore();
+        }
+
+        // 7. 绘制动态变色多匝螺旋弹簧（连接 b1RightX 与 b2LeftX）
+        const springY = floorY - Math.min(block1H, block2H) * 0.48;
+        renderHelicalSpring(ctx, b1RightX, b2LeftX, springY, deformation, dx0);
+
+        // 8. 绘制金属质感滑块 m1 与 m2
+        renderMetallicBlock(ctx, b1LeftX, b1TopY, block1W, block1H, '#38bdf8', '#0284c7', `m₁=${m1.toFixed(1)}kg`);
+        renderMetallicBlock(ctx, b2LeftX, b2TopY, block2W, block2H, '#10b981', '#059669', `m₂=${m2.toFixed(1)}kg`);
+
+        // 9. 系统质心 (CM) 发光金色准星与匀速参考线
+        if (state.showCm) {
+          // 质心屏幕横坐标对齐两物块视觉中心加权位置
+          const b1CenterScreen = b1LeftX + block1W * 0.5;
+          const b2CenterScreen = b2LeftX + block2W * 0.5;
+          const cmScreenX = (m1 * b1CenterScreen + m2 * b2CenterScreen) / (m1 + m2);
+          const cmY = floorY - 96;
+
+          ctx.save();
+          // 水平参考轨迹线
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.32)';
+          ctx.setLineDash([5, 4]);
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(Math.max(actualWallX + 6, cmScreenX - 130), cmY);
+          ctx.lineTo(Math.min(w - 20, cmScreenX + 130), cmY);
+          ctx.stroke();
+
+          // 垂直投影虚线
+          ctx.beginPath();
+          ctx.moveTo(cmScreenX, cmY);
+          ctx.lineTo(cmScreenX, floorY);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 发光金色质心靶标准星
+          const glow = ctx.createRadialGradient(cmScreenX, cmY, 2, cmScreenX, cmY, 16);
+          glow.addColorStop(0, 'rgba(245, 158, 11, 0.55)');
+          glow.addColorStop(1, 'rgba(245, 158, 11, 0)');
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(cmScreenX, cmY, 16, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#f59e0b';
+          ctx.strokeStyle = '#070b14';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(cmScreenX, cmY, 5.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#fcd34d';
+          ctx.font = '700 10.5px ui-monospace, monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`质心 CM (v_cm=${vCm.toFixed(2)}m/s)`, cmScreenX, cmY - 14);
+          ctx.restore();
+        }
+
+        // 10. 速度与弹力 / 墙支持力矢量箭头
+        if (state.showVectors) {
+          const maxRefV = Math.max(v20, vCmFinal * 2, 0.5);
+          const vScale = 68 / maxRefV;
+
+          const maxRefF = Math.max(k * dx0, 1.0);
+          const fScale = 64 / maxRefF;
+
+          // 10a. 墙壁支持力 N_wall（仅阶段 I 存在，作用在 m1 左侧向右推）
+          if (isPhase1 && wallForce > 0.05) {
+            drawHorizontalVector(
+              ctx, actualWallX, b1TopY + block1H * 0.35,
+              wallForce * fScale, '#f43f5e', `N_wall=${wallForce.toFixed(1)}N`, true
+            );
+          }
+
+          // 10b. 弹簧弹力作用在 m1 与 m2 上（大小相等方向相反）
+          const fsMag = Math.abs(springForceOn2);
+          if (fsMag > 0.08) {
+            // 作用在 m2 上的弹力（向右为正，向左为负）
+            drawHorizontalVector(
+              ctx, b2LeftX + block2W * 0.5, b2TopY - 12,
+              springForceOn2 * fScale, '#f97316', `Fs=${fsMag.toFixed(1)}N`, true
+            );
+            // 作用在 m1 上的弹力（与 m2 相反）
+            if (!isPhase1) {
+              drawHorizontalVector(
+                ctx, b1LeftX + block1W * 0.5, b1TopY - 12,
+                -springForceOn2 * fScale, '#f97316', `Fs=${fsMag.toFixed(1)}N`, true
+              );
+            }
+          }
+
+          // 10c. 滑块速度矢量 v1 与 v2（绘制在导轨下方，避免与上方力矢量重叠）
+          if (v1 > 0.03) {
+            drawHorizontalVector(
+              ctx, b1LeftX + block1W * 0.5, floorY + 34,
+              v1 * vScale, '#38bdf8', `v₁=${v1.toFixed(2)}m/s`, false
+            );
+          }
+          if (Math.abs(v2) > 0.03) {
+            drawHorizontalVector(
+              ctx, b2LeftX + block2W * 0.5, floorY + 56,
+              v2 * vScale, '#10b981', `v₂=${v2.toFixed(2)}m/s`, false
+            );
+          }
+        }
+      }
+
+      // 绘制光滑水平导轨与带世界坐标刻度尺的地面
+      function renderSmoothTrackAndRuler(ctx, w, h, floorY, camLeftMeters, visibleMeters, pxPerMeter, toScreenX) {
+        ctx.save();
+        // 导轨下方深色基座
+        const baseGrad = ctx.createLinearGradient(0, floorY, 0, h);
+        baseGrad.addColorStop(0, '#0f172a');
+        baseGrad.addColorStop(1, '#050914');
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(0, floorY, w, h - floorY);
+
+        // 光滑导轨高亮顶面线
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(0, floorY);
+        ctx.lineTo(w, floorY);
+        ctx.stroke();
+
+        // 世界坐标刻度尺（每 0.25 m 一小格，每 0.5 m 一主刻度并标数字）
+        const startTick = Math.floor(camLeftMeters / 0.25) * 0.25;
+        const endTick = camLeftMeters + visibleMeters + 0.5;
+        ctx.font = '500 10px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+
+        for (let xm = startTick; xm <= endTick; xm += 0.25) {
+          if (xm < -0.001) continue;
+          const sx = toScreenX(xm);
+          if (sx < 0 || sx > w) continue;
+
+          const isMajor = Math.abs((xm * 2) - Math.round(xm * 2)) < 1e-4;
+          ctx.strokeStyle = isMajor ? 'rgba(148, 163, 184, 0.55)' : 'rgba(148, 163, 184, 0.22)';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(sx, floorY);
+          ctx.lineTo(sx, floorY + (isMajor ? 9 : 5));
+          ctx.stroke();
+
+          if (isMajor) {
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText(`${xm.toFixed(1)}m`, sx, floorY + 21);
+          }
+        }
+        ctx.restore();
+      }
+
+      // 绘制左端斜线剖面刚性墙壁
+      function renderRigidWall(ctx, wallX, floorY, wallForce, isPhase1) {
+        const wallTop = floorY - 155;
+        const wallWidth = 22;
+
+        ctx.save();
+        // 墙体填充
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(wallX - wallWidth, wallTop, wallWidth, floorY - wallTop);
+
+        // 工程斜线剖面阴影
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        for (let wy = wallTop + 8; wy <= floorY; wy += 11) {
+          ctx.moveTo(wallX, wy);
+          ctx.lineTo(wallX - wallWidth, wy + 11);
+        }
+        ctx.stroke();
+
+        // 墙面高亮边界（阶段 I 受压时呈现玫瑰红应力发光）
+        ctx.strokeStyle = (isPhase1 && wallForce > 0.1) ? '#f43f5e' : '#64748b';
+        ctx.lineWidth = (isPhase1 && wallForce > 0.1) ? 3.2 : 2.2;
+        ctx.beginPath();
+        ctx.moveTo(wallX, wallTop);
+        ctx.lineTo(wallX, floorY);
+        ctx.stroke();
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('刚性壁', wallX - 11, wallTop - 7);
+        ctx.restore();
+      }
+
+      // 绘制随压缩/拉伸动态变色的多匝螺旋弹簧
+      function renderHelicalSpring(ctx, xStart, xEnd, yCenter, deformation, dx0) {
+        const span = Math.max(12, xEnd - xStart);
+        const lead = Math.min(12, span * 0.12);
+        const coilStart = xStart + lead;
+        const coilEnd = xEnd - lead;
+        const coilSpan = Math.max(4, coilEnd - coilStart);
+
+        // 根据形变量计算色彩：压缩 -> 炽热橙 #f97316，原长 -> 银白 #cbd5e1，拉伸 -> 青碧 #2dd4bf
+        let strokeColor = '#cbd5e1';
+        let glowColor = 'rgba(203, 213, 225, 0.15)';
+        const normDef = deformation / Math.max(dx0, 0.05);
+        if (normDef < -0.03) {
+          strokeColor = '#f97316';
+          glowColor = 'rgba(249, 115, 22, 0.25)';
+        } else if (normDef > 0.03) {
+          strokeColor = '#2dd4bf';
+          glowColor = 'rgba(45, 212, 191, 0.25)';
+        }
+
+        const coils = 12;
+        const ampY = Math.max(8, Math.min(16, 13 - normDef * 2.5));
+
+        ctx.save();
+        // 外层微光
+        ctx.strokeStyle = glowColor;
+        ctx.lineWidth = 6;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        drawSpringPath(ctx, xStart, xEnd, coilStart, coilSpan, yCenter, coils, ampY);
+        ctx.stroke();
+
+        // 核心弹簧金属丝
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 2.5;
+        drawSpringPath(ctx, xStart, xEnd, coilStart, coilSpan, yCenter, coils, ampY);
+        ctx.stroke();
+
+        // 弹簧上方显示实时形变标签
+        const defText = Math.abs(deformation) < 0.003
+          ? '原长 (Δx = 0)'
+          : (deformation < 0 ? `压缩 ${Math.abs(deformation).toFixed(2)}m` : `拉伸 +${deformation.toFixed(2)}m`);
+        ctx.fillStyle = strokeColor;
+        ctx.font = '600 9.5px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(defText, (xStart + xEnd) * 0.5, yCenter - ampY - 7);
+        ctx.restore();
+      }
+
+      function drawSpringPath(ctx, xStart, xEnd, coilStart, coilSpan, yCenter, coils, ampY) {
+        ctx.beginPath();
+        ctx.moveTo(xStart, yCenter);
+        ctx.lineTo(coilStart, yCenter);
+        const steps = coils * 4;
+        for (let i = 1; i <= steps; i++) {
+          const frac = i / steps;
+          const px = coilStart + frac * coilSpan;
+          const py = yCenter + Math.sin(frac * coils * Math.PI * 2) * ampY;
+          ctx.lineTo(px, py);
+        }
+        ctx.lineTo(xEnd, yCenter);
+      }
+
+      // 绘制金属斜边质感物块
+      function renderMetallicBlock(ctx, x, y, w, h, lightColor, darkColor, label) {
+        ctx.save();
+        // 阴影
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.55)';
+        drawRoundRect(ctx, x + 3, y + 3, w, h, 6);
+        ctx.fill();
+
+        // 主体渐变
+        const grad = ctx.createLinearGradient(x, y, x, y + h);
+        grad.addColorStop(0, lightColor);
+        grad.addColorStop(1, darkColor);
+        ctx.fillStyle = grad;
+        drawRoundRect(ctx, x, y, w, h, 6);
+        ctx.fill();
+
+        // 顶部高光边框
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.lineWidth = 1.3;
+        ctx.stroke();
+
+        // 内部标签
+        ctx.fillStyle = '#070b14';
+        ctx.font = '700 10.5px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(label, x + w * 0.5, y + h * 0.5 + 3.5);
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 6. 底部三联同步数据图表渲染
+      // ==========================================================================
+
+      // 图表 1：速度-时间曲线 v1(t), v2(t) 与质心速度 v_cm(t)
+      function renderVelocityChart(sys, inst) {
+        const { ctx, w, h } = setupHiDPICanvas(velChartCanvas);
+        const { t1, tMax, v20, vCmFinal } = sys;
+
+        const pad = { top: 18, right: 16, bottom: 28, left: 42 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+
+        // 估算最大可能瞬时速度
+        const maxV = Math.max(v20, vCmFinal * 2, vCmFinal + (sys.m1 / sys.M) * v20) * 1.15;
+        const minV = Math.min(0, vCmFinal - (sys.m1 / sys.M) * v20) * 1.15;
+        const spanV = Math.max(0.5, maxV - minV);
+
+        const toX = (tv) => pad.left + (tv / tMax) * plotW;
+        const toY = (vv) => pad.top + ((maxV - vv) / spanV) * plotH;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#060a14';
+        ctx.fillRect(0, 0, w, h);
+
+        const zeroY = toY(0);
+
+        // 网格与刻度
+        ctx.save();
+        ctx.font = '500 9.5px ui-monospace, monospace';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+        ctx.lineWidth = 1;
+
+        const vStep = computeNiceStep(spanV, 4);
+        ctx.textAlign = 'right';
+        for (let vv = Math.ceil(minV / vStep) * vStep; vv <= maxV; vv += vStep) {
+          if (Math.abs(vv) < vStep * 0.2) continue;
+          const py = toY(vv);
+          ctx.beginPath();
+          ctx.moveTo(pad.left, py);
+          ctx.lineTo(pad.left + plotW, py);
+          ctx.stroke();
+          ctx.fillStyle = '#64748b';
+          ctx.fillText(vv.toFixed(1), pad.left - 5, py + 3);
+        }
+
+        // 零速轴与左边框
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, zeroY);
+        ctx.lineTo(pad.left + plotW, zeroY);
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.stroke();
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('0', pad.left - 5, zeroY + 3);
+
+        // 阶段分界线 t = t1
+        const t1X = toX(t1);
+        ctx.strokeStyle = 'rgba(244, 63, 94, 0.6)';
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(t1X, pad.top);
+        ctx.lineTo(t1X, pad.top + plotH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#fda4af';
+        ctx.textAlign = 'center';
+        ctx.fillText(`t₁=${t1.toFixed(2)}s`, t1X, pad.top + 11);
+        ctx.restore();
+
+        const steps = 160;
+        // 1. 质心速度 v_cm(t)（金色虚线）
+        drawCurve(ctx, steps, tMax, toX, toY, (ti) => evaluateAtTime(ti, sys).vCm, '#f59e0b', 1.6, true);
+        // 2. 物块 1 速度 v1(t)（天蓝实线）
+        drawCurve(ctx, steps, tMax, toX, toY, (ti) => evaluateAtTime(ti, sys).v1, '#38bdf8', 2.2, false);
+        // 3. 物块 2 速度 v2(t)（翡翠绿实线）
+        drawCurve(ctx, steps, tMax, toX, toY, (ti) => evaluateAtTime(ti, sys).v2, '#10b981', 2.2, false);
+
+        // 当前时刻追踪圆点
+        const curX = toX(inst.t);
+        drawTracker(ctx, curX, toY(inst.vCm), '#f59e0b', 3.4);
+        drawTracker(ctx, curX, toY(inst.v1), '#38bdf8', 4.2);
+        drawTracker(ctx, curX, toY(inst.v2), '#10b981', 4.2);
+      }
+
+      // 图表 2：系统总动量 P(t) = m1*v1 + m2*v2
+      function renderMomentumChart(sys, inst) {
+        const { ctx, w, h } = setupHiDPICanvas(momChartCanvas);
+        const { t1, tMax, P0 } = sys;
+
+        const pad = { top: 18, right: 16, bottom: 28, left: 44 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+
+        const maxP = Math.max(0.5, P0 * 1.24);
+        const toX = (tv) => pad.left + (tv / tMax) * plotW;
+        const toY = (pv) => pad.top + plotH - (pv / maxP) * plotH;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#060a14';
+        ctx.fillRect(0, 0, w, h);
+
+        // 网格与守恒水平参考线 P0
+        const p0Y = toY(P0);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(244, 63, 94, 0.35)';
+        ctx.setLineDash([4, 3]);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, p0Y);
+        ctx.lineTo(pad.left + plotW, p0Y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = '#fda4af';
+        ctx.font = '600 9.5px ui-monospace, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(`P₀=${P0.toFixed(2)}`, pad.left + plotW - 4, p0Y - 5);
+
+        // 阶段分界线 t = t1
+        const t1X = toX(t1);
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(t1X, pad.top);
+        ctx.lineTo(t1X, pad.top + plotH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 坐标轴
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.lineTo(pad.left + plotW, pad.top + plotH);
+        ctx.stroke();
+
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('0', pad.left - 5, pad.top + plotH + 3);
+        ctx.textAlign = 'center';
+        ctx.fillText(`t₁=${t1.toFixed(2)}s`, t1X, pad.top + plotH + 14);
+        ctx.restore();
+
+        // 绘制总动量曲线 P(t)（玫瑰红高亮曲线 + 面积微光填充）
+        const steps = 160;
+        drawCurve(ctx, steps, tMax, toX, toY, (ti) => evaluateAtTime(ti, sys).P, '#f43f5e', 2.4, false);
+
+        drawTracker(ctx, toX(inst.t), toY(inst.P), '#f43f5e', 4.5);
+      }
+
+      // 图表 3：能量转化曲线 Ek1, Ek2, Ep 与 E_total
+      function renderEnergyChart(sys, inst) {
+        const { ctx, w, h } = setupHiDPICanvas(energyChartCanvas);
+        const { t1, tMax, Etotal } = sys;
+
+        const pad = { top: 18, right: 16, bottom: 28, left: 42 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+
+        const maxE = Math.max(0.5, Etotal * 1.18);
+        const toX = (tv) => pad.left + (tv / tMax) * plotW;
+        const toY = (ev) => pad.top + plotH - (ev / maxE) * plotH;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#060a14';
+        ctx.fillRect(0, 0, w, h);
+
+        // 坐标轴与 t1 分界虚线
+        const t1X = toX(t1);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.setLineDash([3, 3]);
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(t1X, pad.top);
+        ctx.lineTo(t1X, pad.top + plotH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.lineTo(pad.left + plotW, pad.top + plotH);
+        ctx.stroke();
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '500 9.5px ui-monospace, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText('0', pad.left - 5, pad.top + plotH + 3);
+        ctx.fillText(`${Etotal.toFixed(1)}J`, pad.left - 4, toY(Etotal) + 3);
+        ctx.textAlign = 'center';
+        ctx.fillText(`t₁=${t1.toFixed(2)}s`, t1X, pad.top + plotH + 14);
+        ctx.restore();
+
+        const steps = 160;
+        // 1. 总机械能 E_total（紫罗兰水平虚线）
+        drawCurve(ctx, steps, tMax, toX, toY, () => Etotal, '#a78bfa', 1.6, true);
+        // 2. 弹簧弹性势能 Ep(t)（琥珀橙实线）
+        drawCurve(ctx, steps, tMax, toX, toY, (ti) => evaluateAtTime(ti, sys).Ep, '#f59e0b', 2.0, false);
+        // 3. m1 动能 Ek1(t)（天蓝实线）
+        drawCurve(ctx, steps, tMax, toX, toY, (ti) => evaluateAtTime(ti, sys).Ek1, '#38bdf8', 2.1, false);
+        // 4. m2 动能 Ek2(t)（翡翠绿实线）
+        drawCurve(ctx, steps, tMax, toX, toY, (ti) => evaluateAtTime(ti, sys).Ek2, '#10b981', 2.1, false);
+
+        // 当前时刻追踪圆点
+        const curX = toX(inst.t);
+        drawTracker(ctx, curX, toY(inst.Ep), '#f59e0b', 3.6);
+        drawTracker(ctx, curX, toY(inst.Ek1), '#38bdf8', 3.8);
+        drawTracker(ctx, curX, toY(inst.Ek2), '#10b981', 3.8);
+      }
+
+      function drawCurve(ctx, steps, maxT, toX, toY, fn, color, lineWidth, dashed) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        if (dashed) ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const ti = (i / steps) * maxT;
+          const px = toX(ti);
+          const py = toY(fn(ti));
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawTracker(ctx, cx, cy, color, radius) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.28;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 1.9, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = color;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 7. 遥测仪表盘与 UI 状态同步更新
+      // ==========================================================================
+      function updateTelemetry(sys, inst) {
+        const { mu, t1, v20, P0, vCmFinal, dxMax, Etotal, tMax, T2 } = sys;
+        const { isPhase1, wallForce, vCm, deformation, P } = inst;
+
+        const progress = tMax > 0 ? Math.min(1000, Math.round((state.t / tMax) * 1000)) : 0;
+        timeSlider.value = progress;
+        timeVal.textContent = `${state.t.toFixed(3)} s / ${tMax.toFixed(3)} s`;
+        tickT1.textContent = `离墙 t₁=${t1.toFixed(2)}s`;
+        tickMid.textContent = `t₁+T₂=${(t1 + T2).toFixed(2)}s`;
+        tickEnd.textContent = `${tMax.toFixed(2)}s`;
+
+        muBadge.textContent = `μ = ${mu.toFixed(2)} kg`;
+        etotBadge.textContent = `E_tot = ${Etotal.toFixed(2)} J`;
+
+        // 阶段状态横幅与遥测卡片切换
+        if (isPhase1) {
+          phaseBanner.className = 'phase-banner phase-1';
+          phaseBannerText.textContent = '阶段 I · 靠墙阶段：墙施外力 N_wall > 0 → 系统动量增加，机械能守恒';
+          phaseTelemetryCard.className = 'tele-card span-2';
+          statPhaseShort.textContent = '阶段 I · 靠墙加速';
+          statWallForce.textContent = `墙壁支持力 N_wall = ${wallForce.toFixed(2)} N`;
+          statPhaseDetail.textContent = 'm₁ 静止靠墙 (x₁ = 0)，墙壁冲量持续注入系统水平动量';
+        } else {
+          phaseBanner.className = 'phase-banner phase-2';
+          phaseBannerText.textContent = '阶段 II · 离墙阶段：无水平外力 (N_wall = 0) → 系统动量守恒，质心匀速';
+          phaseTelemetryCard.className = 'tele-card span-2 phase2';
+          statPhaseShort.textContent = '阶段 II · 离墙双体振动';
+          statWallForce.textContent = '墙壁支持力 N_wall = 0.00 N (已离墙)';
+          statPhaseDetail.textContent = '水平合外力为零，系统总动量严格守恒，质心以恒速向右前进';
+        }
+        phaseBannerTimer.textContent = `t = ${state.t.toFixed(3)} s (t₁ = ${t1.toFixed(3)} s)`;
+
+        statT1.textContent = `${t1.toFixed(3)} s`;
+        statV20.textContent = `离墙初速 v₂₀ = ${v20.toFixed(2)} m/s`;
+
+        statVcm.textContent = `${vCm.toFixed(2)} m/s`;
+        statVcmFinal.textContent = `离墙后恒定: ${vCmFinal.toFixed(2)} m/s`;
+
+        statDxMax.textContent = `${dxMax.toFixed(3)} m`;
+        statDxInst.textContent = `当前形变: ${deformation >= 0 ? '+' : ''}${deformation.toFixed(3)} m`;
+
+        statMomentum.textContent = `${P.toFixed(2)} N·s`;
+        statMomentumFinal.textContent = `离墙守恒值: ${P0.toFixed(2)} N·s`;
+
+        velChartNote.textContent = `v_cm = ${vCmFinal.toFixed(2)} m/s`;
+        momChartNote.textContent = `P₀ = ${P0.toFixed(2)} N·s`;
+        energyChartNote.textContent = `E_tot = ${Etotal.toFixed(2)} J`;
+      }
+
+      function renderAll() {
+        const sys = getSystemConstants();
+        if (state.t > sys.tMax) {
+          state.t = sys.tMax;
+        }
+        const inst = evaluateAtTime(state.t, sys);
+        updateTelemetry(sys, inst);
+        renderMotionViewport(sys, inst);
+        renderVelocityChart(sys, inst);
+        renderMomentumChart(sys, inst);
+        renderEnergyChart(sys, inst);
+      }
+
+      // ==========================================================================
+      // 8. 动画循环与交互事件绑定
+      // ==========================================================================
+      function setPlayState(playing) {
+        state.isPlaying = playing;
+        playIcon.textContent = playing ? '❚❚' : '▶';
+        playText.textContent = playing ? '暂停' : '播放';
+      }
+
+      function resetToZero(autoPlay = true) {
+        state.t = 0.0;
+        setPlayState(autoPlay);
+        renderAll();
+      }
+
+      function animateLoop(timestamp) {
+        try {
+          if (state.lastFrameTime === null) {
+            state.lastFrameTime = timestamp;
+          }
+          const rawDt = (timestamp - state.lastFrameTime) / 1000;
+          state.lastFrameTime = timestamp;
+          const dt = Math.min(rawDt, 0.05);
+
+          if (state.isPlaying) {
+            const sys = getSystemConstants();
+            const speedMult = state.slowMo ? 0.5 : 1.0;
+            state.t += dt * speedMult;
+            if (state.t >= sys.tMax) {
+              // 循环演示完整双阶段演化过程
+              state.t = state.t % sys.tMax;
+            }
+          }
+
+          renderAll();
+        } catch (err) {
+          console.error('双滑块弹簧模拟循环异常:', err);
+        }
+        requestAnimationFrame(animateLoop);
+      }
+
+      function syncSliderLabels() {
+        const dx0 = (1.0 - state.eta) * state.l;
+        m1Val.textContent = `${state.m1.toFixed(1)} kg`;
+        m2Val.textContent = `${state.m2.toFixed(1)} kg`;
+        kVal.textContent = `${state.k.toFixed(0)} N/m`;
+        etaVal.textContent = `${state.eta.toFixed(2)} (压缩 Δx₀ = ${dx0.toFixed(2)} m)`;
+      }
+
+      function onParamSliderChange() {
+        presetBtns.forEach((b) => b.classList.remove('active'));
+        state.m1 = parseFloat(m1Slider.value);
+        state.m2 = parseFloat(m2Slider.value);
+        state.k = parseFloat(kSlider.value);
+        state.eta = parseFloat(etaSlider.value);
+        syncSliderLabels();
+        resetToZero(true);
+      }
+
+      m1Slider.addEventListener('input', onParamSliderChange);
+      m2Slider.addEventListener('input', onParamSliderChange);
+      kSlider.addEventListener('input', onParamSliderChange);
+      etaSlider.addEventListener('input', onParamSliderChange);
+
+      // 工况预设按钮
+      presetBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const cfg = PRESETS[btn.dataset.preset];
+          if (!cfg) return;
+
+          presetBtns.forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          state.m1 = cfg.m1;
+          state.m2 = cfg.m2;
+          state.k = cfg.k;
+          state.eta = cfg.eta;
+
+          m1Slider.value = cfg.m1;
+          m2Slider.value = cfg.m2;
+          kSlider.value = cfg.k;
+          etaSlider.value = cfg.eta;
+
+          syncSliderLabels();
+          resetToZero(true);
+        });
+      });
+
+      // 手动拖动时间轴
+      timeSlider.addEventListener('input', (e) => {
+        const sys = getSystemConstants();
+        state.t = (Number(e.target.value) / 1000) * sys.tMax;
+        setPlayState(false);
+        renderAll();
+      });
+
+      // 播放/暂停按钮
+      playPauseBtn.addEventListener('click', () => {
+        setPlayState(!state.isPlaying);
+      });
+
+      // 重置按钮
+      resetBtn.addEventListener('click', () => {
+        resetToZero(true);
+      });
+
+      // 0.5x 慢放切换
+      slowBtn.addEventListener('click', () => {
+        state.slowMo = !state.slowMo;
+        slowBtn.classList.toggle('slow-on', state.slowMo);
+        slowText.textContent = state.slowMo ? '0.5x 慢放中' : '0.5x 慢放';
+      });
+
+      // 图层开关
+      toggleCm.addEventListener('change', (e) => {
+        state.showCm = e.target.checked;
+        renderAll();
+      });
+
+      toggleRestLen.addEventListener('change', (e) => {
+        state.showRestLen = e.target.checked;
+        renderAll();
+      });
+
+      toggleVectors.addEventListener('change', (e) => {
+        state.showVectors = e.target.checked;
+        renderAll();
+      });
+
+      // 空格键便捷控制播放/暂停
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && document.activeElement.tagName !== 'BUTTON' && document.activeElement.tagName !== 'INPUT') {
+          e.preventDefault();
+          playPauseBtn.click();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        renderAll();
+      });
+
+      window.onload = function () {
+        syncSliderLabels();
+        renderAll();
+        requestAnimationFrame(animateLoop);
+      };
+    })();
+  </script>
+</body>
+</html>

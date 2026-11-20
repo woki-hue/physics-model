@@ -1,0 +1,2363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>带电圆环轴线上负点电荷的振动实验室 (Electrostatic Ring Oscillation Lab)</title>
+  <style>
+    /* ==========================================================================
+       1. 深空电动力学与分析力学实验室视觉规范
+       ========================================================================== */
+    :root {
+      --bg-deep: #060a14;
+      --bg-space: #0b1120;
+      --bg-panel: rgba(15, 23, 42, 0.9);
+      --bg-sub: rgba(9, 14, 26, 0.78);
+      --border-dim: rgba(148, 163, 184, 0.16);
+      --border-glow: rgba(56, 189, 248, 0.38);
+
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --c-cyan: #38bdf8;
+      --c-teal: #2dd4bf;
+      --c-gold: #f59e0b;
+      --c-magenta: #e879f9;
+      --c-rose: #f43f5e;
+      --c-emerald: #10b981;
+      --c-violet: #a78bfa;
+
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 7px;
+      --shadow-card: 0 14px 36px -10px rgba(2, 6, 23, 0.85);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background-color: var(--bg-deep);
+      background-image:
+        radial-gradient(circle at 15% 0%, rgba(56, 189, 248, 0.12) 0%, transparent 42%),
+        radial-gradient(circle at 85% 6%, rgba(232, 121, 249, 0.10) 0%, transparent 45%);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .math-i {
+      font-family: "Times New Roman", Georgia, serif;
+      font-style: italic;
+    }
+
+    /* 数学分式与根式排版 */
+    .frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      margin: 0 2px;
+      font-size: 0.83em;
+      line-height: 1.05;
+    }
+    .frac > span:first-child {
+      border-bottom: 1px solid currentColor;
+      padding: 0 3px 1px;
+    }
+    .frac > span:last-child {
+      padding: 1px 3px 0;
+    }
+
+    .sqrt-box {
+      display: inline-flex;
+      align-items: center;
+      vertical-align: middle;
+    }
+    .sqrt-inner {
+      border-top: 1px solid currentColor;
+      padding: 1px 2px 0;
+      margin-left: 1px;
+    }
+
+    /* ==========================================================================
+       2. 顶部 Header 与拉格朗日 / 动力学公式摘要徽章
+       ========================================================================== */
+    .topbar {
+      background: rgba(8, 13, 25, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-dim);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .topbar-inner {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 11px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(232, 121, 249, 0.2));
+      border: 1px solid rgba(56, 189, 248, 0.42);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--c-cyan);
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.16);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.08rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .lab-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.13);
+      color: var(--c-cyan);
+      border: 1px solid rgba(56, 189, 248, 0.34);
+    }
+
+    .brand-sub {
+      font-size: 0.79rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* 公式徽章组 */
+    .formula-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .formula-pill {
+      background: rgba(13, 20, 36, 0.94);
+      border: 1px solid var(--border-dim);
+      border-radius: 9px;
+      padding: 5px 11px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .formula-pill.highlight {
+      border-color: rgba(232, 121, 249, 0.38);
+      background: linear-gradient(145deg, rgba(17, 24, 39, 0.96), rgba(38, 18, 48, 0.85));
+    }
+
+    .fp-label {
+      font-size: 0.67rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .formula-pill.highlight .fp-label {
+      color: var(--c-magenta);
+    }
+
+    .fp-math {
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: #f8fafc;
+      margin-top: 1px;
+    }
+
+    /* ==========================================================================
+       3. 主实验工作台网格布局
+       ========================================================================== */
+    .workspace {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 16px 20px 28px;
+      display: grid;
+      grid-template-columns: 388px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 1120px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .workspace {
+        padding: 12px 12px 24px;
+      }
+      .topbar-inner {
+        padding: 10px 12px;
+      }
+    }
+
+    .card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-lg);
+      padding: 15px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--c-cyan);
+      box-shadow: 0 0 8px var(--c-cyan);
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       4. 左侧控制面板与实时遥测卡片
+       ========================================================================== */
+    .left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .preset-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 14px;
+    }
+
+    .preset-btn {
+      width: 100%;
+      background: var(--bg-sub);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      color: var(--text-secondary);
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .preset-btn:hover {
+      border-color: rgba(56, 189, 248, 0.48);
+      color: #f8fafc;
+      background: rgba(22, 33, 56, 0.92);
+    }
+
+    .preset-btn.active {
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.17), rgba(232, 121, 249, 0.07));
+      border-color: var(--c-cyan);
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 var(--c-cyan);
+    }
+
+    .preset-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .preset-desc {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    .preset-chip {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--c-cyan);
+      background: rgba(56, 189, 248, 0.11);
+      padding: 2px 7px;
+      border-radius: 5px;
+      flex-shrink: 0;
+    }
+
+    /* 参数滑块组 */
+    .sliders-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .slider-box {
+      background: var(--bg-sub);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: var(--radius-md);
+      padding: 9px 11px;
+    }
+
+    .slider-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+      font-size: 0.8rem;
+    }
+
+    .slider-label {
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    .slider-val {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--c-cyan);
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 1px 7px;
+      border-radius: 5px;
+    }
+
+    .slider-val.magenta {
+      color: var(--c-magenta);
+      background: rgba(232, 121, 249, 0.12);
+      border-color: rgba(232, 121, 249, 0.28);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--c-cyan);
+      border: 2px solid #060a14;
+      box-shadow: 0 0 9px rgba(56, 189, 248, 0.65);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.16);
+    }
+
+    input[type="range"].time-slider::-webkit-slider-thumb {
+      background: var(--c-magenta);
+      box-shadow: 0 0 9px rgba(232, 121, 249, 0.65);
+    }
+
+    .slider-bounds {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* 播放与慢动作控制栏 */
+    .controls-row {
+      display: grid;
+      grid-template-columns: 1.1fr 0.95fr 1.05fr;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .btn-ctrl {
+      min-height: 37px;
+      padding: 0 9px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-dim);
+      background: rgba(15, 23, 42, 0.92);
+      color: var(--text-primary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-ctrl:hover {
+      border-color: var(--c-cyan);
+      background: rgba(30, 41, 59, 0.95);
+    }
+
+    .btn-ctrl.primary {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      border-color: rgba(56, 189, 248, 0.55);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(14, 165, 233, 0.32);
+    }
+
+    .btn-ctrl.primary:hover {
+      filter: brightness(1.08);
+    }
+
+    .btn-ctrl.slow-active {
+      background: rgba(232, 121, 249, 0.18);
+      border-color: var(--c-magenta);
+      color: #f5d0fe;
+    }
+
+    /* 视觉图层开关 */
+    .toggles-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-dim);
+    }
+
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.79rem;
+      color: #cbd5e1;
+      cursor: pointer;
+      user-select: none;
+      padding: 2px 0;
+    }
+
+    .switch-pill {
+      position: relative;
+      width: 38px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .switch-pill input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .switch-track {
+      position: absolute;
+      inset: 0;
+      background: #1e293b;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 999px;
+      transition: 0.2s;
+    }
+
+    .switch-track::after {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 2px;
+      top: 2px;
+      border-radius: 50%;
+      background: #94a3b8;
+      transition: 0.2s;
+    }
+
+    .switch-pill input:checked + .switch-track {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: var(--c-cyan);
+    }
+
+    .switch-pill input:checked + .switch-track::after {
+      transform: translateX(18px);
+      background: var(--c-cyan);
+    }
+
+    /* 实时遥测卡片 */
+    .tele-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .tele-item {
+      background: var(--bg-sub);
+      border: 1px solid rgba(148, 163, 184, 0.13);
+      border-radius: var(--radius-md);
+      padding: 9px 11px;
+    }
+
+    .tele-label {
+      font-size: 0.71rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tele-value {
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-top: 2px;
+    }
+
+    .tele-note {
+      font-size: 0.69rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ==========================================================================
+       5. 右侧 2.5D 主视口与底部三联同步分析图表
+       ========================================================================== */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+    }
+
+    .leg-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .leg-circle {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .leg-line {
+      width: 14px;
+      height: 0;
+      border-top: 2px dashed #38bdf8;
+      display: inline-block;
+    }
+
+    .canvas-frame {
+      position: relative;
+      width: 100%;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: #050914;
+    }
+
+    #ringSimCanvas {
+      display: block;
+      width: 100%;
+      height: 430px;
+    }
+
+    @media (max-width: 640px) {
+      #ringSimCanvas {
+        height: 345px;
+      }
+    }
+
+    /* 底部三联同步图表 */
+    .charts-trio {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 1260px) {
+      .charts-trio {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .charts-trio {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-canvas {
+      display: block;
+      width: 100%;
+      height: 235px;
+    }
+
+    .chart-foot {
+      margin-top: 7px;
+      font-size: 0.71rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部导航栏与分析力学公式摘要 -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="9" cy="12" rx="4" ry="8" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <circle cx="17.5" cy="12" r="2.5" fill="#e879f9" stroke="#e879f9" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            <span>带电圆环轴线上负点电荷的振动实验室</span>
+            <span class="lab-badge">电动力学与分析力学交互实验室</span>
+          </div>
+          <div class="brand-sub">
+            Electrostatic Ring Oscillation Lab · RK4 自适应微步长精确求解 · 对比微幅简谐近似 (<i class="math-i">x</i> &ll; <i class="math-i">R</i>) 与大振幅非简谐软弹簧效应
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 个拉格朗日与动力学方程公式卡片 -->
+      <div class="formula-strip">
+        <div class="formula-pill highlight" title="手写推导拉格朗日量 L = T - U">
+          <div class="fp-label">拉格朗日量 <i class="math-i">L</i> = <i class="math-i">T</i> &minus; <i class="math-i">U</i></div>
+          <div class="fp-math">
+            <i class="math-i">L</i> = <span class="frac"><span>1</span><span>2</span></span><i class="math-i">m</i><span style="position:relative;display:inline-block;">x<span style="position:absolute;top:-0.55em;left:0.15em;">&middot;</span></span><sup>2</sup> + <span class="frac"><span><i class="math-i">Q</i><sup>2</sup></span><span>4&pi;&varepsilon;<sub>0</sub><span class="sqrt-box">&radic;<span class="sqrt-inner"><i class="math-i">R</i><sup>2</sup> + <i class="math-i">x</i><sup>2</sup></span></span></span></span>
+          </div>
+        </div>
+
+        <div class="formula-pill" title="欧拉-拉格朗日方程导出的精确非线性运动方程">
+          <div class="fp-label">精确动力学方程</div>
+          <div class="fp-math">
+            <i class="math-i">m</i><span style="position:relative;display:inline-block;">x<span style="position:absolute;top:-0.55em;left:0.05em;">&uml;</span></span> + <span class="frac"><span><i class="math-i">Q</i><sup>2</sup> <i class="math-i">x</i></span><span>4&pi;&varepsilon;<sub>0</sub>(<i class="math-i">x</i><sup>2</sup> + <i class="math-i">R</i><sup>2</sup>)<sup>3/2</sup></span></span> = 0
+          </div>
+        </div>
+
+        <div class="formula-pill" title="当 x << R 时的简谐振动固有角频率">
+          <div class="fp-label">微幅简谐角频率 (<i class="math-i">x</i> &ll; <i class="math-i">R</i>)</div>
+          <div class="fp-math">
+            <i class="math-i">&omega;</i><sub>0</sub> = <span class="sqrt-box">&radic;<span class="sqrt-inner"><span class="frac"><span><i class="math-i">Q</i><sup>2</sup></span><span>4&pi;&varepsilon;<sub>0</sub> <i class="math-i">m R</i><sup>3</sup></span></span></span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主实验工作区 -->
+  <main class="workspace">
+    <!-- 左侧控制与遥测面板 -->
+    <aside class="left-col">
+      <!-- 参数与实验预设卡片 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="dot-pulse"></span>
+            <span>实验工况预设与物理参数</span>
+          </div>
+          <span class="mono" style="font-size:0.71rem;color:var(--c-cyan);" id="keffBadge">k_eff = 143.8 N/m</span>
+        </div>
+
+        <!-- 3 个实验预设按钮 -->
+        <div class="preset-stack" id="presetGroup">
+          <button type="button" class="preset-btn active" data-preset="shm">
+            <div>
+              <div class="preset-name">微幅简谐模式 (x₀ = 0.15R)</div>
+              <div class="preset-desc mono">x₀/R=0.15, R=10cm, Q=4.0μC, m=5.0g</div>
+            </div>
+            <span class="preset-chip mono">x &ll; R 简谐</span>
+          </button>
+
+          <button type="button" class="preset-btn" data-preset="maxForce">
+            <div>
+              <div class="preset-name">最大回复力点 (x₀ = 0.71R)</div>
+              <div class="preset-desc mono">x₀/R=0.71 (&approx;R/&radic;2), |F_x| 达全局峰值</div>
+            </div>
+            <span class="preset-chip mono">峰值回复力</span>
+          </button>
+
+          <button type="button" class="preset-btn" data-preset="anharmonic">
+            <div>
+              <div class="preset-name">大振幅非简谐 (x₀ = 1.80R)</div>
+              <div class="preset-desc mono">x₀/R=1.80, 库仑力衰减导致周期显著拉长</div>
+            </div>
+            <span class="preset-chip mono">强非简谐</span>
+          </button>
+        </div>
+
+        <!-- 4 个核心物理参数滑块 + 时间轴拖动条 -->
+        <div class="sliders-group">
+          <div class="slider-box">
+            <div class="slider-top">
+              <label class="slider-label" for="ampSlider">初始相对振幅 <i class="math-i">x</i><sub>0</sub> / <i class="math-i">R</i></label>
+              <span class="slider-val mono" id="ampVal">0.15 R (1.50 cm)</span>
+            </div>
+            <input type="range" id="ampSlider" min="0.05" max="2.20" step="0.01" value="0.15" />
+            <div class="slider-bounds mono"><span>0.05 R</span><span>0.707 R (峰值力)</span><span>2.20 R</span></div>
+          </div>
+
+          <div class="slider-box">
+            <div class="slider-top">
+              <label class="slider-label" for="radiusSlider">圆环半径 <i class="math-i">R</i></label>
+              <span class="slider-val mono" id="radiusVal">10.0 cm</span>
+            </div>
+            <input type="range" id="radiusSlider" min="5.0" max="25.0" step="0.5" value="10.0" />
+            <div class="slider-bounds mono"><span>5.0 cm</span><span>15.0 cm</span><span>25.0 cm</span></div>
+          </div>
+
+          <div class="slider-box">
+            <div class="slider-top">
+              <label class="slider-label" for="chargeSlider">电荷量大小 <i class="math-i">Q</i> (+<i class="math-i">Q</i> 与 &minus;<i class="math-i">Q</i>)</label>
+              <span class="slider-val mono" id="chargeVal">4.0 μC</span>
+            </div>
+            <input type="range" id="chargeSlider" min="1.0" max="10.0" step="0.1" value="4.0" />
+            <div class="slider-bounds mono"><span>1.0 μC</span><span>5.5 μC</span><span>10.0 μC</span></div>
+          </div>
+
+          <div class="slider-box">
+            <div class="slider-top">
+              <label class="slider-label" for="massSlider">负点电荷质量 <i class="math-i">m</i></label>
+              <span class="slider-val mono" id="massVal">5.0 g</span>
+            </div>
+            <input type="range" id="massSlider" min="1.0" max="20.0" step="0.5" value="5.0" />
+            <div class="slider-bounds mono"><span>1.0 g</span><span>10.5 g</span><span>20.0 g</span></div>
+          </div>
+
+          <div class="slider-box">
+            <div class="slider-top">
+              <label class="slider-label" for="timeSlider">时间轴手动拖动 <i class="math-i">t</i></label>
+              <span class="slider-val magenta mono" id="timeVal">0.00 ms / 74.94 ms</span>
+            </div>
+            <input type="range" id="timeSlider" class="time-slider" min="0" max="1000" step="1" value="0" />
+            <div class="slider-bounds mono">
+              <span>0</span>
+              <span id="tickHalfT">0.5 T</span>
+              <span id="tickOneT">1.0 T</span>
+              <span id="tickTwoT">2.0 T</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 播放 / 重置 / 慢动作倍率 -->
+        <div class="controls-row">
+          <button type="button" class="btn-ctrl primary" id="playPauseBtn">
+            <span id="playIcon">❚❚</span>
+            <span id="playText">暂停</span>
+          </button>
+          <button type="button" class="btn-ctrl" id="resetBtn">
+            <span>↺</span>
+            <span>重置 t=0</span>
+          </button>
+          <button type="button" class="btn-ctrl" id="slowBtn">
+            <span>⏱</span>
+            <span id="slowText">1.0x 正常</span>
+          </button>
+        </div>
+
+        <!-- 3 个视觉图层开关 -->
+        <div class="toggles-list">
+          <label class="toggle-item">
+            <span>显示微幅简谐对照质点 (<i class="math-i">x</i><sub>SHM</sub> = <i class="math-i">x</i><sub>0</sub> cos <i class="math-i">&omega;</i><sub>0</sub><i class="math-i">t</i>)</span>
+            <span class="switch-pill">
+              <input type="checkbox" id="toggleShm" checked />
+              <span class="switch-track"></span>
+            </span>
+          </label>
+
+          <label class="toggle-item">
+            <span>显示上下微元对称受力分解矢量 (d<i class="math-i">F</i><sub>1</sub>, d<i class="math-i">F</i><sub>2</sub> 与合力 <i class="math-i">F</i><sub>x</sub>)</span>
+            <span class="switch-pill">
+              <input type="checkbox" id="toggleVectors" checked />
+              <span class="switch-track"></span>
+            </span>
+          </label>
+
+          <label class="toggle-item">
+            <span>标记最大回复力位置 (<i class="math-i">x</i> = &plusmn;<i class="math-i">R</i>/&radic;2)</span>
+            <span class="switch-pill">
+              <input type="checkbox" id="togglePeakMarkers" checked />
+              <span class="switch-track"></span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <!-- 实时遥测数据卡片 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="dot-pulse" style="background:var(--c-magenta);box-shadow:0 0 8px var(--c-magenta);"></span>
+            <span>实时分析力学与周期遥测</span>
+          </div>
+          <span class="mono" style="font-size:0.71rem;color:var(--c-emerald);" id="energyDriftBadge">ΔE/E₀ &lt; 10⁻¹¹</span>
+        </div>
+
+        <div class="tele-grid">
+          <div class="tele-item">
+            <div class="tele-label"><span>简谐周期 <i class="math-i">T</i><sub>0</sub> = 2&pi;/<i class="math-i">&omega;</i><sub>0</sub></span></div>
+            <div class="tele-value mono" style="color:var(--c-cyan);" id="statT0">37.05 ms</div>
+            <div class="tele-note mono" id="statOmega0">&omega;₀ = 169.59 rad/s</div>
+          </div>
+
+          <div class="tele-item">
+            <div class="tele-label"><span>实际精确周期 <i class="math-i">T</i><sub>exact</sub></span></div>
+            <div class="tele-value mono" style="color:var(--c-gold);" id="statTexact">37.47 ms</div>
+            <div class="tele-note mono" id="statPeriodDev">相对偏差: +1.13%</div>
+          </div>
+
+          <div class="tele-item">
+            <div class="tele-label"><span>瞬时拉格朗日量 <i class="math-i">L</i> = <i class="math-i">T</i> &minus; <i class="math-i">U</i></span></div>
+            <div class="tele-value mono" style="color:var(--c-magenta);" id="statLagrangian">1422.1 mJ</div>
+            <div class="tele-note mono" id="statKinPot">T=0.00, U=-1422.1 mJ</div>
+          </div>
+
+          <div class="tele-item">
+            <div class="tele-label"><span>总机械能 <i class="math-i">E</i> = <i class="math-i">T</i> + <i class="math-i">U</i></span></div>
+            <div class="tele-value mono" style="color:var(--c-emerald);" id="statTotalE">-1422.1 mJ</div>
+            <div class="tele-note mono" id="statOscE">振动能量 &Delta;E: 15.91 mJ</div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 右侧 2.5D 主视口与底部三联同步分析图表 -->
+    <section class="right-col">
+      <!-- 2.5D 透视电动力学主画布 -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <span class="dot-pulse"></span>
+            <span>2.5D 透视均匀带电圆环 (+<i class="math-i">Q</i>) 与轴向负点电荷 (&minus;<i class="math-i">Q</i>) 实时视口</span>
+          </div>
+          <div class="legend-row">
+            <span class="leg-tag"><i class="leg-circle" style="background:#f59e0b;"></i>带电圆环 (+Q)</span>
+            <span class="leg-tag"><i class="leg-circle" style="background:#e879f9;"></i>负点电荷 (&minus;Q)</span>
+            <span class="leg-tag"><i class="leg-circle" style="background:rgba(56,189,248,0.45);border:1px solid #38bdf8;"></i>简谐对照 (x_SHM)</span>
+            <span class="leg-tag"><i class="leg-line" style="border-color:#2dd4bf;"></i>微元引力 dF₁, dF₂</span>
+            <span class="leg-tag"><i class="leg-circle" style="background:#f43f5e;"></i>轴向合力 F_x</span>
+          </div>
+        </div>
+
+        <div class="canvas-frame">
+          <canvas id="ringSimCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- 底部三联同步数据图表 -->
+      <div class="charts-trio">
+        <!-- 图表 1：位移-时间对比 x(t)/R -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="dot-pulse" style="background:var(--c-magenta);box-shadow:0 0 8px var(--c-magenta);"></span>
+              <span>位移 - 时间对比 <i class="math-i">x</i>(<i class="math-i">t</i>)/<i class="math-i">R</i></span>
+            </div>
+            <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">实线精确 · 虚线SHM</span>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="dispChartCanvas" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-foot">
+            <span>大振幅时周期变长，洋红实线相对青虚线产生相位滞后</span>
+            <span class="mono" style="color:var(--c-magenta);" id="dispChartNote">Δx/R = 0.000</span>
+          </div>
+        </div>
+
+        <!-- 图表 2：轴向回复力曲线 Fx(x) -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="dot-pulse" style="background:var(--c-gold);box-shadow:0 0 8px var(--c-gold);"></span>
+              <span>轴向回复力曲线 <i class="math-i">F</i><sub>x</sub>(<i class="math-i">x</i>)</span>
+            </div>
+            <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">峰值在 x = &plusmn;0.707R</span>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="forceChartCanvas" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-foot">
+            <span>金线为精确非线性库仑力，青虚线为原点切线胡克近似</span>
+            <span class="mono" style="color:var(--c-gold);" id="forceChartNote">F_max = 5.53 N</span>
+          </div>
+        </div>
+
+        <!-- 图表 3：分析力学能量与拉格朗日量演化 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="dot-pulse" style="background:var(--c-emerald);box-shadow:0 0 8px var(--c-emerald);"></span>
+              <span>分析力学能量与拉格朗日量演化</span>
+            </div>
+            <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);" id="lagChartHeader">L = 1422.1 mJ</span>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="energyChartCanvas" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-foot">
+            <span>绿 T(t) · 琥珀 U(t)&minus;U(0) · 蓝总振动能 &Delta;E · 紫 &Delta;L=2T</span>
+            <span class="mono" style="color:var(--c-emerald);" id="energyChartNote">&Delta;E = 15.91 mJ</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /**
+     * ============================================================================
+     * 带电圆环轴线上负点电荷的振动实验室 (Electrostatic Ring Oscillation Lab)
+     * 物理引擎与 2.5D 透视渲染系统
+     * 核心数学模型：
+     *   动能:       T = (1/2) m v^2
+     *   静电势能:   U(x) = - k_e Q^2 / sqrt(R^2 + x^2)
+     *   拉格朗日量: L = T - U = (1/2) m v^2 + k_e Q^2 / sqrt(R^2 + x^2)
+     *   精确方程:   a(x) = d^2x/dt^2 = - (k_e Q^2 / m) * x / (x^2 + R^2)^(3/2)
+     *   微幅近似:   ω_0 = sqrt(k_e Q^2 / (m R^3)), T_0 = 2π / ω_0
+     * ============================================================================
+     */
+    (function () {
+      'use strict';
+
+      // 库仑静电力常量 k_e = 1 / (4π ε_0) (N·m^2/C^2)
+      const KE = 8.9875517923e9;
+
+      // ==========================================================================
+      // 1. 实验状态与参数定义
+      // ==========================================================================
+      const state = {
+        x0Ratio: 0.15,        // 初始相对振幅 x0 / R (0.05 ~ 2.20)
+        R_cm: 10.0,           // 圆环半径 R (cm, 5.0 ~ 25.0)
+        Q_uC: 4.0,            // 电荷量大小 Q (μC, 1.0 ~ 10.0)
+        m_g: 5.0,             // 点电荷质量 m (g, 1.0 ~ 20.0)
+        t: 0.0,               // 当前物理仿真时间 (s)
+        isPlaying: true,      // 播放状态
+        slowMo: false,        // 慢动作倍率 (false -> 1.0x, true -> 0.25x)
+        showShm: true,        // 显示微幅简谐对照质点
+        showVectors: true,    // 显示上下微元对称受力分解矢量
+        showPeakMarkers: true,// 标记最大回复力位置 x = ±R/√2
+        lastFrameTime: null
+      };
+
+      // 3 个快捷实验预设
+      const PRESETS = {
+        shm:        { x0Ratio: 0.15, R_cm: 10.0, Q_uC: 4.0, m_g: 5.0 },
+        maxForce:   { x0Ratio: 0.71, R_cm: 10.0, Q_uC: 4.0, m_g: 5.0 },
+        anharmonic: { x0Ratio: 1.80, R_cm: 10.0, Q_uC: 4.0, m_g: 5.0 }
+      };
+
+      // 缓存预计算的 RK4 轨迹与特征量
+      let simCache = null;
+      let cacheKey = '';
+
+      // ==========================================================================
+      // 2. 四阶龙格-库塔（RK4）自适应微步长动力学求解器
+      // ==========================================================================
+      function computeAcceleration(x, coeff) {
+        // a(x) = - coeff * x / (x^2 + R^2)^(3/2), 其中 coeff = k_e * Q^2 / m
+        const r2 = x * x + coeff.R2;
+        return -coeff.kQ2_over_m * x / (r2 * Math.sqrt(r2));
+      }
+
+      function rk4Step(x, v, dt, coeff) {
+        const a1 = computeAcceleration(x, coeff);
+        const k1x = v;
+        const k1v = a1;
+
+        const x2 = x + 0.5 * dt * k1x;
+        const v2 = v + 0.5 * dt * k1v;
+        const a2 = computeAcceleration(x2, coeff);
+        const k2x = v2;
+        const k2v = a2;
+
+        const x3 = x + 0.5 * dt * k2x;
+        const v3 = v + 0.5 * dt * k2v;
+        const a3 = computeAcceleration(x3, coeff);
+        const k3x = v3;
+        const k3v = a3;
+
+        const x4 = x + dt * k3x;
+        const v4 = v + dt * k3v;
+        const a4 = computeAcceleration(x4, coeff);
+        const k4x = v4;
+        const k4v = a4;
+
+        return {
+          x: x + (dt / 6.0) * (k1x + 2.0 * k2x + 2.0 * k3x + k4x),
+          v: v + (dt / 6.0) * (k1v + 2.0 * k2v + 2.0 * k3v + k4v)
+        };
+      }
+
+      /**
+       * 构建当前参数下的完整 RK4 精确动力学缓存与事件检测周期
+       */
+      function getSimulationData() {
+        const key = `${state.x0Ratio}|${state.R_cm}|${state.Q_uC}|${state.m_g}`;
+        if (simCache && cacheKey === key) {
+          return simCache;
+        }
+
+        const R = state.R_cm * 1e-2;     // m
+        const Q = state.Q_uC * 1e-6;     // C
+        const m = state.m_g * 1e-3;      // kg
+        const x0 = state.x0Ratio * R;    // m
+
+        const kQ2 = KE * Q * Q;          // N·m^2
+        const kQ2_over_m = kQ2 / m;
+        const R2 = R * R;
+        const R3 = R2 * R;
+
+        // 微幅简谐极限参数 (x << R)
+        const kEff = kQ2 / R3;           // 等效劲度系数 (N/m)
+        const omega0 = Math.sqrt(kEff / m);
+        const T0 = (2.0 * Math.PI) / omega0;
+
+        // 势能基准与能量常数
+        const U0_center = -kQ2 / R;                          // U(0) = -k_e Q^2 / R
+        const U_init = -kQ2 / Math.sqrt(R2 + x0 * x0);       // U(x0)
+        const E_total = U_init;                              // 总机械能 E = T + U (因为初速为0)
+        const E_osc = E_total - U0_center;                   // 相对环心的振动机械能 ΔE >= 0
+        const L_init = -U_init;                              // 初态拉格朗日量 L(0) = 0 - U(x0)
+
+        // 最大回复力峰值（位于 x = ±R/√2）
+        const xPeakForce = R / Math.SQRT2;
+        const F_max = (kQ2 * xPeakForce) / Math.pow(R2 + xPeakForce * xPeakForce, 1.5);
+
+        const coeff = { R2, kQ2_over_m };
+
+        // 自适应微步长：保证至少 1200 步/周期，且不超过 0.0005 s
+        const dt = Math.min(0.0005, T0 / 1200.0);
+
+        // 1. 先积分超过 1 个完整周期，通过事件检测精确定位半周期 T/2 与全周期 T_exact
+        let x = x0;
+        let v = 0.0;
+        let t = 0.0;
+        let tHalf = null;
+        let tExact = null;
+
+        const maxSearchSteps = 60000;
+        for (let step = 0; step < maxSearchSteps; step++) {
+          const prevV = v;
+          const prevT = t;
+          const next = rk4Step(x, v, dt, coeff);
+          x = next.x;
+          v = next.v;
+          t += dt;
+
+          // 半周期事件：速度由负变正（到达左侧转折点 -x0）
+          if (tHalf === null && step > 10 && prevV <= 0 && v > 0) {
+            const frac = -prevV / (v - prevV);
+            tHalf = prevT + frac * dt;
+          }
+
+          // 全周期事件：速度由正变负（回到右侧初始释放点 +x0）
+          if (tHalf !== null && tExact === null && prevV >= 0 && v < 0) {
+            const frac = prevV / (prevV - v);
+            tExact = prevT + frac * dt;
+            break;
+          }
+        }
+
+        if (!tExact || !isFinite(tExact)) {
+          tExact = tHalf ? tHalf * 2.0 : T0;
+        }
+
+        // 2. 沿 [0, 2 * T_exact] 生成高精度等间隔采样表，供实时插值与同步图表使用
+        const horizon = 2.0 * tExact;
+        const sampleCount = 1200;
+        const sampleDt = horizon / sampleCount;
+
+        const samples = new Array(sampleCount + 1);
+        x = x0;
+        v = 0.0;
+        t = 0.0;
+        let maxRelEnergyDrift = 0.0;
+
+        for (let i = 0; i <= sampleCount; i++) {
+          const kin = 0.5 * m * v * v;
+          const pot = -kQ2 / Math.sqrt(R2 + x * x);
+          const totE = kin + pot;
+          const relDrift = Math.abs((totE - E_total) / Math.max(1e-15, Math.abs(E_total)));
+          if (relDrift > maxRelEnergyDrift) maxRelEnergyDrift = relDrift;
+
+          const r2 = x * x + R2;
+          const fx = -(kQ2 * x) / (r2 * Math.sqrt(r2));
+
+          samples[i] = {
+            t,
+            x,
+            v,
+            fx,
+            kin,
+            pot,
+            potRel: pot - U0_center,
+            totE,
+            lag: kin - pot,
+            lagRel: (kin - pot) - L_init
+          };
+
+          if (i < sampleCount) {
+            // 在两个采样点之间跑多个 RK4 微步长
+            const subSteps = Math.max(1, Math.ceil(sampleDt / dt));
+            const hStep = sampleDt / subSteps;
+            for (let s = 0; s < subSteps; s++) {
+              const nxt = rk4Step(x, v, hStep, coeff);
+              x = nxt.x;
+              v = nxt.v;
+            }
+            t += sampleDt;
+          }
+        }
+
+        simCache = {
+          R, Q, m, x0, kQ2, kEff, omega0, T0,
+          tExact, horizon, sampleDt, samples,
+          U0_center, U_init, E_total, E_osc, L_init,
+          F_max, maxRelEnergyDrift
+        };
+        cacheKey = key;
+        return simCache;
+      }
+
+      /**
+       * 从高精度采样表中线性插值任意时刻 t ∈ [0, 2*T_exact] 的物理状态
+       */
+      function queryStateAtTime(t, sim) {
+        const clampedT = Math.max(0, Math.min(sim.horizon, t));
+        const idxFloat = clampedT / sim.sampleDt;
+        const i0 = Math.min(sim.samples.length - 2, Math.floor(idxFloat));
+        const alpha = idxFloat - i0;
+        const s0 = sim.samples[i0];
+        const s1 = sim.samples[i0 + 1];
+
+        const lerp = (a, b) => a + (b - a) * alpha;
+        const x = lerp(s0.x, s1.x);
+        const v = lerp(s0.v, s1.v);
+        const fx = lerp(s0.fx, s1.fx);
+        const kin = lerp(s0.kin, s1.kin);
+        const pot = lerp(s0.pot, s1.pot);
+        const potRel = lerp(s0.potRel, s1.potRel);
+        const totE = lerp(s0.totE, s1.totE);
+        const lag = lerp(s0.lag, s1.lag);
+        const lagRel = lerp(s0.lagRel, s1.lagRel);
+
+        // 微幅简谐解析对照质点
+        const xShm = sim.x0 * Math.cos(sim.omega0 * clampedT);
+        const fxShm = -sim.kEff * x; // 同一位置处的胡克线性近似力
+
+        return {
+          t: clampedT,
+          x,
+          xRatio: x / sim.R,
+          v,
+          fx,
+          kin,
+          pot,
+          potRel,
+          totE,
+          lag,
+          lagRel,
+          xShm,
+          xShmRatio: xShm / sim.R,
+          fxShm
+        };
+      }
+
+      // ==========================================================================
+      // 3. DOM 节点引用绑定
+      // ==========================================================================
+      const ringSimCanvas = document.getElementById('ringSimCanvas');
+      const dispChartCanvas = document.getElementById('dispChartCanvas');
+      const forceChartCanvas = document.getElementById('forceChartCanvas');
+      const energyChartCanvas = document.getElementById('energyChartCanvas');
+
+      const ampSlider = document.getElementById('ampSlider');
+      const radiusSlider = document.getElementById('radiusSlider');
+      const chargeSlider = document.getElementById('chargeSlider');
+      const massSlider = document.getElementById('massSlider');
+      const timeSlider = document.getElementById('timeSlider');
+
+      const ampVal = document.getElementById('ampVal');
+      const radiusVal = document.getElementById('radiusVal');
+      const chargeVal = document.getElementById('chargeVal');
+      const massVal = document.getElementById('massVal');
+      const timeVal = document.getElementById('timeVal');
+      const tickHalfT = document.getElementById('tickHalfT');
+      const tickOneT = document.getElementById('tickOneT');
+      const tickTwoT = document.getElementById('tickTwoT');
+
+      const playPauseBtn = document.getElementById('playPauseBtn');
+      const playIcon = document.getElementById('playIcon');
+      const playText = document.getElementById('playText');
+      const resetBtn = document.getElementById('resetBtn');
+      const slowBtn = document.getElementById('slowBtn');
+      const slowText = document.getElementById('slowText');
+      const presetBtns = document.querySelectorAll('.preset-btn');
+
+      const toggleShm = document.getElementById('toggleShm');
+      const toggleVectors = document.getElementById('toggleVectors');
+      const togglePeakMarkers = document.getElementById('togglePeakMarkers');
+
+      // 遥测输出节点
+      const keffBadge = document.getElementById('keffBadge');
+      const energyDriftBadge = document.getElementById('energyDriftBadge');
+      const statT0 = document.getElementById('statT0');
+      const statOmega0 = document.getElementById('statOmega0');
+      const statTexact = document.getElementById('statTexact');
+      const statPeriodDev = document.getElementById('statPeriodDev');
+      const statLagrangian = document.getElementById('statLagrangian');
+      const statKinPot = document.getElementById('statKinPot');
+      const statTotalE = document.getElementById('statTotalE');
+      const statOscE = document.getElementById('statOscE');
+
+      const dispChartNote = document.getElementById('dispChartNote');
+      const forceChartNote = document.getElementById('forceChartNote');
+      const lagChartHeader = document.getElementById('lagChartHeader');
+      const energyChartNote = document.getElementById('energyChartNote');
+
+      // ==========================================================================
+      // 4. Canvas 高分屏适配与通用绘图工具
+      // ==========================================================================
+      function setupHiDPICanvas(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(10, rect.width);
+        const h = Math.max(10, rect.height);
+        const targetW = Math.round(w * dpr);
+        const targetH = Math.round(h * dpr);
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+        }
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, w, h };
+      }
+
+      function drawRoundRect(ctx, x, y, w, h, r) {
+        const rad = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rad, y);
+        ctx.lineTo(x + w - rad, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+        ctx.lineTo(x + w, y + h - rad);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+        ctx.lineTo(x + rad, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+        ctx.lineTo(x, y + rad);
+        ctx.quadraticCurveTo(x, y, x + rad, y);
+        ctx.closePath();
+      }
+
+      function computeNiceStep(range, targetTicks) {
+        if (range <= 0) return 1;
+        const rough = range / targetTicks;
+        const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+        const norm = rough / mag;
+        let nice = 1;
+        if (norm <= 1) nice = 1;
+        else if (norm <= 2) nice = 2;
+        else if (norm <= 2.5) nice = 2.5;
+        else if (norm <= 5) nice = 5;
+        else nice = 10;
+        return nice * mag;
+      }
+
+      function drawArrow(ctx, x1, y1, x2, y2, color, lineWidth = 2.4, dashed = false) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.hypot(dx, dy);
+        if (len < 3) return;
+        const ang = Math.atan2(dy, dx);
+        const head = Math.min(10.5, Math.max(6, len * 0.24));
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = 'round';
+        if (dashed) ctx.setLineDash([4, 3]);
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2 - head * 0.65 * Math.cos(ang), y2 - head * 0.65 * Math.sin(ang));
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - head * Math.cos(ang - Math.PI / 6), y2 - head * Math.sin(ang - Math.PI / 6));
+        ctx.lineTo(x2 - head * Math.cos(ang + Math.PI / 6), y2 - head * Math.sin(ang + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawPillLabel(ctx, text, cx, cy, bgColor, borderColor, textColor) {
+        ctx.save();
+        ctx.font = '600 10px ui-monospace, SFMono-Regular, monospace';
+        const tw = ctx.measureText(text).width + 10;
+        const th = 16;
+        const bx = cx - tw * 0.5;
+        const by = cy - th * 0.5;
+
+        ctx.fillStyle = bgColor;
+        drawRoundRect(ctx, bx, by, tw, th, 4);
+        ctx.fill();
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = textColor;
+        ctx.textAlign = 'center';
+        ctx.fillText(text, cx, by + 11.5);
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 5. 主 2.5D 透视电动力学视口渲染 (ringSimCanvas)
+      // ==========================================================================
+      function renderRingViewport(sim, inst) {
+        const { ctx, w, h } = setupHiDPICanvas(ringSimCanvas);
+        const { R, F_max } = sim;
+        const { xRatio, xShmRatio, fx, v, kin, pot, lag } = inst;
+
+        // 1. 深空物理实验室背景
+        const bgGrad = ctx.createRadialGradient(w * 0.5, h * 0.5, 25, w * 0.5, h * 0.5, Math.max(w, h) * 0.75);
+        bgGrad.addColorStop(0, '#0f172a');
+        bgGrad.addColorStop(1, '#050914');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // 微弱科学网格
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.05)';
+        ctx.lineWidth = 1;
+        const step = 36;
+        for (let gx = (w * 0.5) % step; gx < w; gx += step) {
+          ctx.beginPath();
+          ctx.moveTo(gx, 0);
+          ctx.lineTo(gx, h);
+          ctx.stroke();
+        }
+        for (let gy = (h * 0.5) % step; gy < h; gy += step) {
+          ctx.beginPath();
+          ctx.moveTo(0, gy);
+          ctx.lineTo(w, gy);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // 2. 2.5D 透视坐标系映射
+        const cx = w * 0.5;
+        const cy = h * 0.52;
+
+        // 水平轴尺度：确保 [-2.35 R, +2.35 R] 完整留在画面内
+        const maxAxisR = Math.max(2.35, state.x0Ratio * 1.15);
+        const halfAxisPx = Math.max(130, (w - 84) * 0.5);
+        const pxPerR_X = halfAxisPx / maxAxisR;
+
+        // 圆环半径屏幕映射（随 R_cm 5~25cm 微调视觉半径，并保证不上下溢出）
+        const rScaleFactor = 0.72 + 0.28 * ((state.R_cm - 5.0) / 20.0);
+        const ringRadiusY = Math.min(h * 0.34, Math.max(76, h * 0.31 * rScaleFactor));
+        const ringRadiusX = ringRadiusY * 0.34; // 2.5D 透视倾角椭圆水平半轴
+
+        const toAxisScreenX = (ratio) => cx + ratio * pxPerR_X;
+
+        // 3. 中心静电势阱光晕与对称电场线示意
+        ctx.save();
+        const wellGrad = ctx.createRadialGradient(cx, cy, 4, cx, cy, pxPerR_X * 1.25);
+        wellGrad.addColorStop(0, 'rgba(56, 189, 248, 0.16)');
+        wellGrad.addColorStop(0.5, 'rgba(245, 158, 11, 0.06)');
+        wellGrad.addColorStop(1, 'rgba(5, 9, 20, 0)');
+        ctx.fillStyle = wellGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, pxPerR_X * 1.25, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 对称静电电场线（从带电圆环向 ±x 轴两侧发散）
+        [-1, 1].forEach((dir) => {
+          [-0.65, -0.32, 0.32, 0.65].forEach((offsetRatio) => {
+            const startY = cy + offsetRatio * ringRadiusY;
+            const endX = cx + dir * halfAxisPx * 0.88;
+            const endY = cy + offsetRatio * ringRadiusY * 1.45;
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.13)';
+            ctx.lineWidth = 1.1;
+            ctx.beginPath();
+            ctx.moveTo(cx, startY);
+            ctx.quadraticCurveTo(cx + dir * pxPerR_X * 0.55, startY * 0.85 + endY * 0.15, endX, endY);
+            ctx.stroke();
+          });
+        });
+        ctx.restore();
+
+        // 4. 绘制带电圆环 (+Q) 的【后半环】（z < 0，位于中心 x 轴后方）
+        renderChargedRingHalf(ctx, cx, cy, ringRadiusX, ringRadiusY, 'back');
+
+        // 5. 绘制水平中心 x 轴与刻度标尺
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx - halfAxisPx, cy);
+        ctx.lineTo(cx + halfAxisPx, cy);
+        ctx.stroke();
+
+        // +x 轴末端箭头
+        drawArrow(ctx, cx + halfAxisPx - 14, cy, cx + halfAxisPx + 6, cy, '#94a3b8', 1.6);
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = 'italic 700 12px "Times New Roman", Georgia, serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('x', cx + halfAxisPx + 10, cy + 4);
+
+        // 刻度线 (-2R, -R, O, +R, +2R)
+        ctx.font = '500 10px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        [-2, -1, 0, 1, 2].forEach((tickR) => {
+          if (Math.abs(tickR) > maxAxisR) return;
+          const tx = toAxisScreenX(tickR);
+          ctx.strokeStyle = tickR === 0 ? '#38bdf8' : 'rgba(148, 163, 184, 0.45)';
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          ctx.moveTo(tx, cy - 5);
+          ctx.lineTo(tx, cy + 5);
+          ctx.stroke();
+
+          ctx.fillStyle = tickR === 0 ? '#38bdf8' : '#64748b';
+          const lbl = tickR === 0 ? 'O (0)' : `${tickR > 0 ? '+' : ''}${tickR}R`;
+          ctx.fillText(lbl, tx, cy + 19);
+        });
+
+        // 振幅边界虚线 [-x0, +x0]
+        const leftAmpX = toAxisScreenX(-state.x0Ratio);
+        const rightAmpX = toAxisScreenX(state.x0Ratio);
+        ctx.strokeStyle = 'rgba(232, 121, 249, 0.35)';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(leftAmpX, cy - 22);
+        ctx.lineTo(leftAmpX, cy + 22);
+        ctx.moveTo(rightAmpX, cy - 22);
+        ctx.lineTo(rightAmpX, cy + 22);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // 6. 最大回复力位置标记 (x = ±R/√2 ≈ ±0.707R)
+        if (state.showPeakMarkers) {
+          const invSqrt2 = 1.0 / Math.SQRT2;
+          [-invSqrt2, invSqrt2].forEach((posR) => {
+            const mx = toAxisScreenX(posR);
+            ctx.save();
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.52)';
+            ctx.setLineDash([4, 4]);
+            ctx.lineWidth = 1.3;
+            ctx.beginPath();
+            ctx.moveTo(mx, cy - ringRadiusY * 0.72);
+            ctx.lineTo(mx, cy + ringRadiusY * 0.72);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const tagText = posR < 0 ? '最大回复力 -0.707R' : '最大回复力 +0.707R';
+            const tagY = posR < 0 ? (cy - ringRadiusY * 0.72 - 12) : (cy + ringRadiusY * 0.72 + 12);
+            drawPillLabel(
+              ctx, tagText, mx, tagY,
+              'rgba(120, 53, 15, 0.85)', 'rgba(245, 158, 11, 0.6)', '#fde68a'
+            );
+            ctx.restore();
+          });
+        }
+
+        // 7. 振动区间发光轨迹带
+        const particleX = toAxisScreenX(xRatio);
+        const shmX = toAxisScreenX(xShmRatio);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(232, 121, 249, 0.28)';
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(leftAmpX, cy);
+        ctx.lineTo(rightAmpX, cy);
+        ctx.stroke();
+        ctx.restore();
+
+        // 8. 上下对称微元库仑引力分解矢量 (dF_top, dF_bottom 与合力 F_x)
+        if (state.showVectors) {
+          renderSymmetricForceVectors(ctx, cx, cy, ringRadiusY, particleX, xRatio, fx, F_max, pxPerR_X);
+        }
+
+        // 9. 微幅简谐对照幽灵质点 (x_SHM = x0 cos ω0 t)
+        if (state.showShm) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1.6;
+          ctx.setLineDash([3, 2]);
+          ctx.beginPath();
+          ctx.arc(shmX, cy - 16, 8.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 连接至轴线的细垂线
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(shmX, cy - 7);
+          ctx.lineTo(shmX, cy);
+          ctx.stroke();
+
+          ctx.fillStyle = '#7dd3fc';
+          ctx.font = '600 9.5px ui-monospace, monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('x_SHM', shmX, cy - 28);
+          ctx.restore();
+        }
+
+        // 10. 实际负点电荷 (-Q) 发光洋红球体
+        renderNegativeChargeSphere(ctx, particleX, cy, state.m_g);
+
+        // 11. 绘制带电圆环 (+Q) 的【前半环】（z > 0，覆盖在中心轴与穿过圆环的质点前方，形成真实 2.5D 遮挡穿环感）
+        renderChargedRingHalf(ctx, cx, cy, ringRadiusX, ringRadiusY, 'front');
+
+        // 12. 顶部左上角半透明 HUD 实时参数看板
+        renderTopLeftHUD(ctx, inst);
+      }
+
+      /**
+       * 绘制 2.5D 透视带电圆环的前半环或后半环，并沿环周均匀排布发光 "+" 电荷标识
+       */
+      function renderChargedRingHalf(ctx, cx, cy, rx, ry, half) {
+        ctx.save();
+        // back: 从顶部 -π/2 经左侧 π 到底部 +π/2
+        // front: 从顶部 -π/2 经右侧 0 到底部 +π/2
+        const startAng = -Math.PI * 0.5;
+        const endAng = Math.PI * 0.5;
+        const anticlockwise = (half === 'back');
+
+        // 外层金青双色发光光晕
+        ctx.strokeStyle = half === 'front' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(56, 189, 248, 0.22)';
+        ctx.lineWidth = half === 'front' ? 11 : 8;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, startAng, endAng, anticlockwise);
+        ctx.stroke();
+
+        // 圆环金属主躯干
+        const ringGrad = ctx.createLinearGradient(cx, cy - ry, cx, cy + ry);
+        if (half === 'front') {
+          ringGrad.addColorStop(0, '#fcd34d');
+          ringGrad.addColorStop(0.5, '#f59e0b');
+          ringGrad.addColorStop(1, '#38bdf8');
+        } else {
+          ringGrad.addColorStop(0, '#0284c7');
+          ringGrad.addColorStop(0.5, '#0369a1');
+          ringGrad.addColorStop(1, '#b45309');
+        }
+        ctx.strokeStyle = ringGrad;
+        ctx.lineWidth = half === 'front' ? 4.8 : 3.6;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, startAng, endAng, anticlockwise);
+        ctx.stroke();
+
+        // 沿环周均匀分布 16 个 "+" 正电荷微元标记
+        const totalCharges = 16;
+        for (let i = 0; i < totalCharges; i++) {
+          const theta = (i / totalCharges) * Math.PI * 2;
+          const cosT = Math.cos(theta); // > 0 为前半环, < 0 为后半环
+          const isFront = cosT >= -1e-6;
+          if ((half === 'front' && !isFront) || (half === 'back' && isFront)) continue;
+
+          const px = cx + rx * cosT;
+          const py = cy + ry * Math.sin(theta);
+
+          ctx.fillStyle = half === 'front' ? '#fef08a' : '#7dd3fc';
+          ctx.beginPath();
+          ctx.arc(px, py, half === 'front' ? 3.2 : 2.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          if (half === 'front') {
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 1.1;
+            ctx.beginPath();
+            ctx.moveTo(px - 2, py);
+            ctx.lineTo(px + 2, py);
+            ctx.moveTo(px, py - 2);
+            ctx.lineTo(px, py + 2);
+            ctx.stroke();
+          }
+        }
+
+        // 顶部与底部微元高亮点（用于连接受力分解虚线）
+        if (half === 'front') {
+          [cy - ry, cy + ry].forEach((ey) => {
+            ctx.fillStyle = '#2dd4bf';
+            ctx.beginPath();
+            ctx.arc(cx, ey, 4.2, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          drawPillLabel(
+            ctx, `均匀带电圆环 +Q (R=${state.R_cm.toFixed(1)}cm)`,
+            cx, cy - ry - 18,
+            'rgba(15, 23, 42, 0.88)', 'rgba(245, 158, 11, 0.5)', '#fcd34d'
+          );
+        }
+        ctx.restore();
+      }
+
+      /**
+       * 绘制上下对称微元的斜向库仑引力 dF_top, dF_bottom 及合成轴向回复力 F_x
+       */
+      function renderSymmetricForceVectors(ctx, cx, cy, ry, particleX, xRatio, fx, F_max, pxPerR_X) {
+        const topY = cy - ry;
+        const botY = cy + ry;
+
+        // 1. 从圆环上下微元连向负点电荷的库仑引力几何连线
+        ctx.save();
+        ctx.strokeStyle = 'rgba(45, 212, 191, 0.36)';
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(cx, topY);
+        ctx.lineTo(particleX, cy);
+        ctx.lineTo(cx, botY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // 当 |xRatio| 极小时，合力趋近 0，仅保留上下对称引力矢量示意
+        const forceNorm = Math.min(1.0, Math.abs(fx) / Math.max(F_max, 1e-9));
+        const netPx = Math.max(8, forceNorm * Math.min(115, pxPerR_X * 0.72));
+        const dirX = xRatio >= 0 ? -1 : 1; // 始终指向原点 O
+
+        // 几何斜向单位向量（从质点指向圆环顶部与底部微元）
+        const dxTop = cx - particleX;
+        const dyTop = topY - cy;
+        const distTop = Math.hypot(dxTop, dyTop);
+        if (distTop < 10) return;
+
+        const ux = dxTop / distTop;
+        const uy = dyTop / distTop;
+
+        // 令斜向矢量水平投影与合力比例协调，视觉呈现平行四边形法则合成
+        const obliqueLen = Math.min(82, Math.max(28, (netPx * 0.55) / Math.max(0.28, Math.abs(ux))));
+        const f1EndX = particleX + ux * obliqueLen;
+        const f1EndY = cy + uy * obliqueLen;
+        const f2EndX = particleX + ux * obliqueLen;
+        const f2EndY = cy - uy * obliqueLen;
+
+        // 绘制上下对称微元引力箭头 dF1, dF2
+        drawArrow(ctx, particleX, cy, f1EndX, f1EndY, '#2dd4bf', 2.0);
+        drawArrow(ctx, particleX, cy, f2EndX, f2EndY, '#2dd4bf', 2.0);
+
+        // 竖直分量抵消虚线
+        ctx.save();
+        ctx.strokeStyle = 'rgba(45, 212, 191, 0.35)';
+        ctx.setLineDash([2, 2]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(f1EndX, f1EndY);
+        ctx.lineTo(f2EndX, f2EndY);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.fillStyle = '#5eead4';
+        ctx.font = '600 9.5px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('dF₁', f1EndX, f1EndY - 6);
+        ctx.fillText('dF₂', f2EndX, f2EndY + 13);
+
+        // 合成轴向回复力矢量 F_x（玫瑰红高亮箭头）
+        if (Math.abs(xRatio) > 0.015) {
+          const netEndX = particleX + dirX * netPx;
+          drawArrow(ctx, particleX, cy, netEndX, cy, '#f43f5e', 3.0);
+
+          const labelX = netEndX + dirX * 42;
+          drawPillLabel(
+            ctx, `Fx = ${fx >= 0 ? '+' : ''}${fx.toFixed(2)} N`,
+            labelX, cy + 18,
+            'rgba(136, 19, 55, 0.88)', '#fb7185', '#ffe4e6'
+          );
+        }
+      }
+
+      /**
+       * 绘制发光洋红负点电荷 (-Q) 球体
+       */
+      function renderNegativeChargeSphere(ctx, px, py, massGrams) {
+        const radius = 10 + ((massGrams - 1.0) / 19.0) * 7;
+        ctx.save();
+
+        // 外部电晕光环
+        const halo = ctx.createRadialGradient(px, py, radius * 0.3, px, py, radius * 2.4);
+        halo.addColorStop(0, 'rgba(232, 121, 249, 0.45)');
+        halo.addColorStop(1, 'rgba(232, 121, 249, 0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(px, py, radius * 2.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 立体球体渐变
+        const sphereGrad = ctx.createRadialGradient(px - radius * 0.35, py - radius * 0.35, radius * 0.1, px, py, radius);
+        sphereGrad.addColorStop(0, '#fdf4ff');
+        sphereGrad.addColorStop(0.28, '#f0abfc');
+        sphereGrad.addColorStop(0.68, '#c026d3');
+        sphereGrad.addColorStop(1, '#4a044e');
+
+        ctx.fillStyle = sphereGrad;
+        ctx.beginPath();
+        ctx.arc(px, py, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#f5d0fe';
+        ctx.lineWidth = 1.3;
+        ctx.stroke();
+
+        // 球心白色 "-" 负号标识
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(px - 4.5, py);
+        ctx.lineTo(px + 4.5, py);
+        ctx.stroke();
+
+        // 下方标签
+        ctx.fillStyle = '#f5d0fe';
+        ctx.font = '700 10px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`-Q (m=${massGrams.toFixed(1)}g)`, px, py + radius + 14);
+        ctx.restore();
+      }
+
+      /**
+       * 绘制主画布左上角半透明 HUD 状态面板
+       */
+      function renderTopLeftHUD(ctx, inst) {
+        const bx = 14;
+        const by = 14;
+        const bw = 248;
+        const bh = 78;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(9, 14, 26, 0.85)';
+        drawRoundRect(ctx, bx, by, bw, bh, 8);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.font = '600 10.5px ui-monospace, monospace';
+        ctx.textAlign = 'left';
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText(`t = ${(inst.t * 1000).toFixed(2)} ms  |  x / R = ${inst.xRatio >= 0 ? '+' : ''}${inst.xRatio.toFixed(3)}`, bx + 11, by + 20);
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillText(`v = ${inst.v >= 0 ? '+' : ''}${inst.v.toFixed(2)} m/s | Fx = ${inst.fx >= 0 ? '+' : ''}${inst.fx.toFixed(2)} N`, bx + 11, by + 38);
+
+        ctx.fillStyle = '#10b981';
+        ctx.fillText(`T = ${(inst.kin * 1000).toFixed(2)} mJ  |  U = ${(inst.pot * 1000).toFixed(1)} mJ`, bx + 11, by + 55);
+
+        ctx.fillStyle = '#e879f9';
+        ctx.fillText(`拉格朗日量 L = T - U = ${(inst.lag * 1000).toFixed(1)} mJ`, bx + 11, by + 71);
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 6. 底部三联同步分析图表渲染
+      // ==========================================================================
+
+      // 图表 1：位移-时间对比 x(t)/R
+      function renderDispChart(sim, inst) {
+        const { ctx, w, h } = setupHiDPICanvas(dispChartCanvas);
+        const { samples, horizon, omega0, tExact } = sim;
+
+        const pad = { top: 18, right: 16, bottom: 28, left: 44 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+
+        const maxR = Math.max(0.1, state.x0Ratio * 1.18);
+        const toX = (tv) => pad.left + (tv / horizon) * plotW;
+        const toY = (rv) => pad.top + plotH * 0.5 - (rv / maxR) * (plotH * 0.5);
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#050914';
+        ctx.fillRect(0, 0, w, h);
+
+        const zeroY = toY(0);
+
+        // 水平网格与 Y 轴刻度
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.font = '500 9.5px ui-monospace, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#64748b';
+
+        [state.x0Ratio, state.x0Ratio * 0.5, -state.x0Ratio * 0.5, -state.x0Ratio].forEach((rv) => {
+          const py = toY(rv);
+          ctx.beginPath();
+          ctx.moveTo(pad.left, py);
+          ctx.lineTo(pad.left + plotW, py);
+          ctx.stroke();
+          ctx.fillText(`${rv >= 0 ? '+' : ''}${rv.toFixed(2)}`, pad.left - 5, py + 3);
+        });
+
+        // 垂直关键周期刻度: 0.5T, 1.0T, 2.0T
+        ctx.textAlign = 'center';
+        [
+          { t: 0.5 * tExact, label: '0.5T' },
+          { t: 1.0 * tExact, label: 'T_exact' },
+          { t: 2.0 * tExact, label: '2T' }
+        ].forEach((mk) => {
+          const px = toX(mk.t);
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(px, pad.top);
+          ctx.lineTo(px, pad.top + plotH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText(mk.label, px, pad.top + plotH + 14);
+        });
+
+        // 中心零轴与左轴
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, zeroY);
+        ctx.lineTo(pad.left + plotW, zeroY);
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.stroke();
+        ctx.restore();
+
+        // 青色虚线：理想微幅简谐曲线 x_SHM(t) / R = (x0/R) cos(ω0 t)
+        ctx.save();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+        ctx.setLineDash([4, 3]);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        const steps = 160;
+        for (let i = 0; i <= steps; i++) {
+          const ti = (i / steps) * horizon;
+          const rShm = state.x0Ratio * Math.cos(omega0 * ti);
+          const px = toX(ti);
+          const py = toY(rShm);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // 洋红实线：精确非线性 RK4 曲线 x(t) / R
+        ctx.save();
+        ctx.strokeStyle = '#e879f9';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        const stride = Math.max(1, Math.floor(samples.length / 240));
+        for (let i = 0; i < samples.length; i += stride) {
+          const s = samples[i];
+          const px = toX(s.t);
+          const py = toY(s.x / sim.R);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // 实时光标点
+        const curX = toX(inst.t);
+        drawDotTracker(ctx, curX, toY(inst.xShmRatio), '#38bdf8', 3.4);
+        drawDotTracker(ctx, curX, toY(inst.xRatio), '#e879f9', 4.5);
+      }
+
+      // 图表 2：轴向回复力曲线 Fx(x) across [-2.3R, +2.3R]
+      function renderForceChart(sim, inst) {
+        const { ctx, w, h } = setupHiDPICanvas(forceChartCanvas);
+        const { R, kQ2, kEff, F_max } = sim;
+
+        const pad = { top: 18, right: 16, bottom: 28, left: 46 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+
+        const maxRangeR = 2.3;
+        const maxForceY = Math.max(0.05, F_max * 1.28);
+
+        const toX = (rv) => pad.left + plotW * 0.5 + (rv / maxRangeR) * (plotW * 0.5);
+        const toY = (fv) => pad.top + plotH * 0.5 - (fv / maxForceY) * (plotH * 0.5);
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#050914';
+        ctx.fillRect(0, 0, w, h);
+
+        const cx = toX(0);
+        const cy = toY(0);
+
+        // 网格与坐标轴
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.font = '500 9.5px ui-monospace, monospace';
+
+        [-2, -1, 1, 2].forEach((rv) => {
+          const px = toX(rv);
+          ctx.beginPath();
+          ctx.moveTo(px, pad.top);
+          ctx.lineTo(px, pad.top + plotH);
+          ctx.stroke();
+        });
+
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, cy);
+        ctx.lineTo(pad.left + plotW, cy);
+        ctx.moveTo(cx, pad.top);
+        ctx.lineTo(cx, pad.top + plotH);
+        ctx.stroke();
+
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'center';
+        [-2, -1, 1, 2].forEach((rv) => {
+          ctx.fillText(`${rv > 0 ? '+' : ''}${rv}R`, toX(rv), cy + 13);
+        });
+
+        ctx.textAlign = 'right';
+        ctx.fillText(`+${F_max.toFixed(2)}N`, pad.left + 40, toY(F_max) - 3);
+        ctx.fillText(`-${F_max.toFixed(2)}N`, pad.left + 40, toY(-F_max) + 11);
+
+        // ±R/√2 峰值力位置辅助虚线
+        const invSqrt2 = 1.0 / Math.SQRT2;
+        [-invSqrt2, invSqrt2].forEach((pkR) => {
+          const px = toX(pkR);
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(px, pad.top);
+          ctx.lineTo(px, pad.top + plotH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        });
+        ctx.restore();
+
+        // 青色虚线：原点切线胡克线性力 F_SHM(x) = -k_eff * x
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(pad.left, pad.top, plotW, plotH);
+        ctx.clip();
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+        ctx.setLineDash([4, 3]);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(toX(-maxRangeR), toY(kEff * maxRangeR * R));
+        ctx.lineTo(toX(maxRangeR), toY(-kEff * maxRangeR * R));
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // 琥珀金实线：精确非线性轴向回复力曲线 Fx(x) = -k_e Q^2 x / (x^2 + R^2)^(3/2)
+        ctx.save();
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        const steps = 160;
+        for (let i = 0; i <= steps; i++) {
+          const rVal = -maxRangeR + (i / steps) * (2 * maxRangeR);
+          const xVal = rVal * R;
+          const r2 = xVal * xVal + R * R;
+          const fVal = -(kQ2 * xVal) / (r2 * Math.sqrt(r2));
+          const px = toX(rVal);
+          const py = toY(fVal);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // 质点当前在力曲线上的实时状态点
+        const curPx = toX(inst.xRatio);
+        const curPy = toY(inst.fx);
+        drawDotTracker(ctx, curPx, curPy, '#e879f9', 4.8, '#ffffff');
+      }
+
+      // 图表 3：分析力学能量与拉格朗日量演化
+      function renderEnergyChart(sim, inst) {
+        const { ctx, w, h } = setupHiDPICanvas(energyChartCanvas);
+        const { samples, horizon, E_osc } = sim;
+
+        const pad = { top: 18, right: 16, bottom: 28, left: 46 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+
+        // 纵轴量程以振动机械能 ΔE 的 2.15 倍为上限，完整容纳 ΔL(t) = L(t) - L(0) = 2 T(t)
+        const maxEnergyJ = Math.max(1e-9, E_osc * 2.15);
+        const toX = (tv) => pad.left + (tv / horizon) * plotW;
+        const toY = (ev) => pad.top + plotH - (ev / maxEnergyJ) * plotH;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#050914';
+        ctx.fillRect(0, 0, w, h);
+
+        // 网格与刻度
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.font = '500 9.5px ui-monospace, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#64748b';
+
+        [0, 0.5 * E_osc, E_osc, 2.0 * E_osc].forEach((ev) => {
+          const py = toY(ev);
+          ctx.beginPath();
+          ctx.moveTo(pad.left, py);
+          ctx.lineTo(pad.left + plotW, py);
+          ctx.stroke();
+          ctx.fillText(`${(ev * 1000).toFixed(1)}`, pad.left - 5, py + 3);
+        });
+
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + plotH);
+        ctx.lineTo(pad.left + plotW, pad.top + plotH);
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.fillText('0', pad.left, pad.top + plotH + 14);
+        ctx.fillText('T_exact', toX(sim.tExact), pad.top + plotH + 14);
+        ctx.fillText('2T', toX(horizon), pad.top + plotH + 14);
+        ctx.restore();
+
+        const stride = Math.max(1, Math.floor(samples.length / 220));
+
+        // 1. 恒定总振动机械能 ΔE = T + (U - U0)（天蓝水平实线）
+        ctx.save();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        for (let i = 0; i < samples.length; i += stride) {
+          const s = samples[i];
+          const px = toX(s.t);
+          const py = toY(s.kin + s.potRel);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // 2. 相对静电势能 U(t) - U(0)（琥珀橙实线）
+        drawSampleCurve(ctx, samples, stride, toX, toY, (s) => s.potRel, '#f59e0b', 2.0);
+
+        // 3. 动能 T(t) = 1/2 m v^2（翡翠绿实线）
+        drawSampleCurve(ctx, samples, stride, toX, toY, (s) => s.kin, '#10b981', 2.0);
+
+        // 4. 拉格朗日量增量 ΔL(t) = L(t) - L(0) = 2T(t)（紫罗兰高亮曲线）
+        drawSampleCurve(ctx, samples, stride, toX, toY, (s) => s.lagRel, '#a78bfa', 2.2);
+
+        // 当前时刻追踪圆点
+        const curX = toX(inst.t);
+        drawDotTracker(ctx, curX, toY(inst.potRel), '#f59e0b', 3.5);
+        drawDotTracker(ctx, curX, toY(inst.kin), '#10b981', 3.5);
+        drawDotTracker(ctx, curX, toY(inst.lagRel), '#a78bfa', 4.0);
+      }
+
+      function drawSampleCurve(ctx, samples, stride, toX, toY, getter, color, lw) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lw;
+        ctx.beginPath();
+        for (let i = 0; i < samples.length; i += stride) {
+          const s = samples[i];
+          const px = toX(s.t);
+          const py = toY(getter(s));
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawDotTracker(ctx, cx, cy, color, radius, stroke = '#ffffff') {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.28;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 1.9, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = color;
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ==========================================================================
+      // 7. 遥测仪表盘与滑块读数刷新
+      // ==========================================================================
+      function updateTelemetry(sim, inst) {
+        const { R, kEff, omega0, T0, tExact, horizon, E_total, E_osc, F_max, maxRelEnergyDrift } = sim;
+
+        const progress = horizon > 0 ? Math.min(1000, Math.round((state.t / horizon) * 1000)) : 0;
+        timeSlider.value = progress;
+        timeVal.textContent = `${(state.t * 1000).toFixed(2)} ms / ${(horizon * 1000).toFixed(2)} ms`;
+        tickHalfT.textContent = `0.5T=${(0.5 * tExact * 1000).toFixed(1)}ms`;
+        tickOneT.textContent = `T=${(tExact * 1000).toFixed(1)}ms`;
+        tickTwoT.textContent = `2T=${(horizon * 1000).toFixed(1)}ms`;
+
+        keffBadge.textContent = `k_eff = ${kEff.toFixed(1)} N/m`;
+        const driftText = maxRelEnergyDrift < 1e-12 ? 'ΔE/E₀ < 10⁻¹²' : `ΔE/E₀ ≈ ${maxRelEnergyDrift.toExponential(1)}`;
+        energyDriftBadge.textContent = driftText;
+
+        statT0.textContent = `${(T0 * 1000).toFixed(2)} ms`;
+        statOmega0.textContent = `ω₀ = ${omega0.toFixed(2)} rad/s`;
+
+        statTexact.textContent = `${(tExact * 1000).toFixed(2)} ms`;
+        const devPct = ((tExact - T0) / T0) * 100;
+        statPeriodDev.textContent = `相对简谐偏差: +${devPct.toFixed(2)}%`;
+
+        statLagrangian.textContent = `${(inst.lag * 1000).toFixed(2)} mJ`;
+        statKinPot.textContent = `T=${(inst.kin * 1000).toFixed(2)}, U=${(inst.pot * 1000).toFixed(1)} mJ`;
+
+        statTotalE.textContent = `${(E_total * 1000).toFixed(2)} mJ`;
+        statOscE.textContent = `振动机械能 ΔE: ${(E_osc * 1000).toFixed(2)} mJ`;
+
+        const lagDiff = Math.abs(inst.xRatio - inst.xShmRatio);
+        dispChartNote.textContent = `瞬时偏差 |Δx|/R = ${lagDiff.toFixed(3)}`;
+        forceChartNote.textContent = `峰值力 |F|_max = ${F_max.toFixed(2)} N`;
+        lagChartHeader.textContent = `L = ${(inst.lag * 1000).toFixed(1)} mJ`;
+        energyChartNote.textContent = `ΔE = ${(E_osc * 1000).toFixed(2)} mJ`;
+      }
+
+      function renderAll() {
+        const sim = getSimulationData();
+        if (state.t > sim.horizon) {
+          state.t = sim.horizon;
+        }
+        const inst = queryStateAtTime(state.t, sim);
+        updateTelemetry(sim, inst);
+        renderRingViewport(sim, inst);
+        renderDispChart(sim, inst);
+        renderForceChart(sim, inst);
+        renderEnergyChart(sim, inst);
+      }
+
+      // ==========================================================================
+      // 8. 动画循环与交互事件监听
+      // ==========================================================================
+      function setPlayState(playing) {
+        state.isPlaying = playing;
+        playIcon.textContent = playing ? '❚❚' : '▶';
+        playText.textContent = playing ? '暂停' : '播放';
+      }
+
+      function resetToZero(autoPlay = true) {
+        state.t = 0.0;
+        setPlayState(autoPlay);
+        renderAll();
+      }
+
+      function animateLoop(timestamp) {
+        try {
+          if (state.lastFrameTime === null) {
+            state.lastFrameTime = timestamp;
+          }
+          const rawDt = (timestamp - state.lastFrameTime) / 1000;
+          state.lastFrameTime = timestamp;
+          const wallDt = Math.min(rawDt, 0.05);
+
+          if (state.isPlaying) {
+            const sim = getSimulationData();
+            // 将物理周期映射为舒适的视觉观察节拍（1.0x 下约 2.6 秒完成一次完整振荡）
+            const visualCycleSec = state.slowMo ? 10.4 : 2.6;
+            const simDt = wallDt * (sim.tExact / visualCycleSec);
+            state.t += simDt;
+            if (state.t >= sim.horizon) {
+              state.t = state.t % sim.horizon;
+            }
+          }
+
+          renderAll();
+        } catch (err) {
+          console.error('静电圆环振动模拟循环异常:', err);
+        }
+        requestAnimationFrame(animateLoop);
+      }
+
+      function syncSliderLabels() {
+        const x0_cm = state.x0Ratio * state.R_cm;
+        const peakHint = Math.abs(state.x0Ratio - 0.71) < 0.005 ? ' ≈ R/√2' : '';
+        ampVal.textContent = `${state.x0Ratio.toFixed(2)} R (${x0_cm.toFixed(2)} cm)${peakHint}`;
+        radiusVal.textContent = `${state.R_cm.toFixed(1)} cm`;
+        chargeVal.textContent = `${state.Q_uC.toFixed(1)} μC`;
+        massVal.textContent = `${state.m_g.toFixed(1)} g`;
+      }
+
+      function onParamSliderInput() {
+        presetBtns.forEach((b) => b.classList.remove('active'));
+        state.x0Ratio = parseFloat(ampSlider.value);
+        state.R_cm = parseFloat(radiusSlider.value);
+        state.Q_uC = parseFloat(chargeSlider.value);
+        state.m_g = parseFloat(massSlider.value);
+        cacheKey = '';
+        syncSliderLabels();
+        resetToZero(true);
+      }
+
+      ampSlider.addEventListener('input', onParamSliderInput);
+      radiusSlider.addEventListener('input', onParamSliderInput);
+      chargeSlider.addEventListener('input', onParamSliderInput);
+      massSlider.addEventListener('input', onParamSliderInput);
+
+      // 预设工况按钮
+      presetBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const cfg = PRESETS[btn.dataset.preset];
+          if (!cfg) return;
+
+          presetBtns.forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          state.x0Ratio = cfg.x0Ratio;
+          state.R_cm = cfg.R_cm;
+          state.Q_uC = cfg.Q_uC;
+          state.m_g = cfg.m_g;
+
+          ampSlider.value = cfg.x0Ratio;
+          radiusSlider.value = cfg.R_cm;
+          chargeSlider.value = cfg.Q_uC;
+          massSlider.value = cfg.m_g;
+
+          cacheKey = '';
+          syncSliderLabels();
+          resetToZero(true);
+        });
+      });
+
+      // 时间轴拖动条
+      timeSlider.addEventListener('input', (e) => {
+        const sim = getSimulationData();
+        state.t = (Number(e.target.value) / 1000) * sim.horizon;
+        setPlayState(false);
+        renderAll();
+      });
+
+      // 播放/暂停按钮
+      playPauseBtn.addEventListener('click', () => {
+        setPlayState(!state.isPlaying);
+      });
+
+      // 重置按钮
+      resetBtn.addEventListener('click', () => {
+        resetToZero(true);
+      });
+
+      // 慢动作倍率切换 (1.0x / 0.25x)
+      slowBtn.addEventListener('click', () => {
+        state.slowMo = !state.slowMo;
+        slowBtn.classList.toggle('slow-active', state.slowMo);
+        slowText.textContent = state.slowMo ? '0.25x 慢放' : '1.0x 正常';
+      });
+
+      // 图层开关
+      toggleShm.addEventListener('change', (e) => {
+        state.showShm = e.target.checked;
+        renderAll();
+      });
+
+      toggleVectors.addEventListener('change', (e) => {
+        state.showVectors = e.target.checked;
+        renderAll();
+      });
+
+      togglePeakMarkers.addEventListener('change', (e) => {
+        state.showPeakMarkers = e.target.checked;
+        renderAll();
+      });
+
+      // 空格键便捷控制播放/暂停
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && document.activeElement.tagName !== 'BUTTON' && document.activeElement.tagName !== 'INPUT') {
+          e.preventDefault();
+          playPauseBtn.click();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        renderAll();
+      });
+
+      window.onload = function () {
+        syncSliderLabels();
+        renderAll();
+        requestAnimationFrame(animateLoop);
+      };
+    })();
+  </script>
+</body>
+</html>
